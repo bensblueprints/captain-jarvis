@@ -1,0 +1,4 @@
+[build]
+  publish = "."
+
+# Functions are auto-detected in netlify/functions
