@@ -154,6 +154,23 @@ main{grid-area:main;overflow:hidden;position:relative}
 .dtile.pink{border-color:rgba(255,43,214,.3);box-shadow:0 0 14px rgba(255,43,214,.12),inset 0 0 18px rgba(255,43,214,.05)}
 .dtile.gold .dk{color:#F5B14C;text-shadow:0 0 8px rgba(245,177,76,.6)}
 .dtile .dm{font-size:10px;color:var(--muted);margin-top:3px}
+/* v23 GO CRAZY — scanlines, briefing, content engine */
+#scanlines{position:fixed;inset:0;z-index:90;pointer-events:none;opacity:.5;background:repeating-linear-gradient(to bottom,rgba(103,232,249,.035) 0px,rgba(103,232,249,.035) 1px,transparent 1px,transparent 3px);mix-blend-mode:screen}
+@media(prefers-reduced-motion:no-preference){#scanlines::after{content:'';position:absolute;left:0;right:0;height:120px;background:linear-gradient(to bottom,transparent,rgba(103,232,249,.06),transparent);animation:scansweep 7s linear infinite}}
+@keyframes scansweep{0%{top:-120px}100%{top:100%}}
+.crazybar{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 2px}
+.crazybtn{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:9px 14px;border-radius:9px;border:1px solid rgba(103,232,249,.4);background:linear-gradient(160deg,#0a1322,#0a0f1f);color:#67E8F9;cursor:pointer;text-shadow:0 0 8px rgba(103,232,249,.5);box-shadow:0 0 12px rgba(103,232,249,.12);transition:.15s}
+.crazybtn:hover{border-color:#67E8F9;box-shadow:0 0 20px rgba(103,232,249,.4);transform:translateY(-1px)}
+.crazybtn.pink{border-color:rgba(255,43,214,.45);color:#ff2bd6;text-shadow:0 0 8px rgba(255,43,214,.5)}
+.crazybtn.pink:hover{border-color:#ff2bd6;box-shadow:0 0 20px rgba(255,43,214,.4)}
+.cewrap{margin-top:14px;border:1px solid rgba(255,43,214,.3);border-radius:12px;padding:14px;background:linear-gradient(160deg,#0c0814,#0a0f1f)}
+.cegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:12px}
+.cecard{border:1px solid rgba(103,232,249,.2);border-radius:10px;overflow:hidden;background:#070b16}
+.cecard img{width:100%;display:block;aspect-ratio:1;object-fit:cover}
+.cecard .cefoot{display:flex;gap:6px;padding:8px}
+.cecard .cefoot a,.cecard .cefoot button{flex:1;text-align:center;font-size:10px;padding:6px;border-radius:6px;border:1px solid rgba(103,232,249,.3);background:#0a1322;color:#67E8F9;text-decoration:none;cursor:pointer}
+.cestat{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.briefbox{margin-top:12px;border:1px solid rgba(245,177,76,.35);border-radius:12px;padding:16px;background:linear-gradient(160deg,#13100a,#0a0f1f);line-height:1.6;font-size:14px;color:#f3e9d8;white-space:pre-wrap}
 .voicebar{display:flex;align-items:center;gap:14px;margin-top:16px}
 .vorb{width:54px;height:54px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#67E8F9,#1b6cff 60%,#0a0f1f);box-shadow:0 0 24px rgba(103,232,249,.6);transition:transform .06s linear,box-shadow .1s;flex-shrink:0;cursor:pointer}
 .vorb.live{box-shadow:0 0 36px rgba(255,43,214,.8)}
@@ -278,9 +295,10 @@ main{grid-area:main;overflow:hidden;position:relative}
 
 <div id="boot">
   <div class="core"><div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div><div class="heart"></div></div>
-  <h1>BENJI&nbsp;OS</h1>
+  <h1>CAPTAIN&nbsp;JARVIS</h1>
   <div id="bootLog"></div>
 </div>
+<div id="scanlines"></div>
 
 <div id="lock">
   <div class="core" style="width:72px;height:72px"><div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div><div class="heart"></div></div>
@@ -329,6 +347,13 @@ main{grid-area:main;overflow:hidden;position:relative}
       <div class="neonwrap" id="neonDash" style="display:none"><div class="neoninner">
         <div class="dashgrid" id="dashGrid"></div>
         <div class="voicebar"><div class="vorb" id="vorb" title="Toggle always-listening voice"></div><div class="vtxt" id="vtxt">VOICE: OFF · tap orb to start always-listening</div></div>
+        <div class="crazybar">
+          <button class="crazybtn" id="ccBrief">⚡ Daily Briefing</button>
+          <button class="crazybtn pink" id="ccGranny">🌶 Granny Content Engine</button>
+          <button class="crazybtn" id="ccRefresh">↻ Sync Live Data</button>
+        </div>
+        <div id="briefBox"></div>
+        <div id="ceBox"></div>
       </div></div>
       <div class="grid g3" id="todayStrip" style="display:none;margin-bottom:14px"></div>
       <div class="grid g3" id="healthStrip" style="display:none;margin-bottom:14px"></div>
@@ -473,7 +498,7 @@ main{grid-area:main;overflow:hidden;position:relative}
 /* ===================== STATE ===================== */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 const S = { tasks:[], events:[], history:[], thinking:false, view:'command' };
-const APP_VERSION='v22';
+const APP_VERSION='v23 · GO CRAZY';
 const AGENT_LIB=[{"n": "Cold Email Sequencer", "c": "Email & Outreach", "i": "✉", "r": "writes a full 5-touch cold email sequence with subject lines, timing, and break-up email"}, {"n": "Cold Email Single", "c": "Email & Outreach", "i": "✉", "r": "writes one sharp cold email under 120 words with a clear CTA"}, {"n": "Follow-up Writer", "c": "Email & Outreach", "i": "✉", "r": "writes a polite persistent follow-up that gets a reply without being annoying"}, {"n": "Reply Handler", "c": "Email & Outreach", "i": "✉", "r": "drafts the best reply to an inbound email, matching tone and moving the deal forward"}, {"n": "Subject Line Lab", "c": "Email & Outreach", "i": "✉", "r": "generates 15 high-open-rate subject lines for a given email"}, {"n": "Newsletter Writer", "c": "Email & Outreach", "i": "✉", "r": "writes an engaging email newsletter with a hook, value, and CTA"}, {"n": "Re-engagement Agent", "c": "Email & Outreach", "i": "✉", "r": "writes a win-back email to a cold lead or lapsed customer"}, {"n": "Meeting Booker", "c": "Email & Outreach", "i": "✉", "r": "writes an email that books a call, with a clear time proposal and calendar nudge"}, {"n": "Referral Asker", "c": "Email & Outreach", "i": "✉", "r": "writes an email that asks a happy client for a referral or testimonial"}, {"n": "Apology / Service Recovery", "c": "Email & Outreach", "i": "✉", "r": "writes a professional apology email that keeps the relationship and offers a fix"}, {"n": "Discovery Call Prep", "c": "Sales", "i": "💰", "r": "builds a discovery call agenda with questions, qualification, and objections to expect"}, {"n": "Objection Crusher", "c": "Sales", "i": "💰", "r": "gives crisp rebuttals to the 8 most common sales objections for the offer"}, {"n": "Proposal Writer", "c": "Sales", "i": "💰", "r": "writes a persuasive one-page proposal with scope, price, and next step"}, {"n": "Quote Builder", "c": "Sales", "i": "💰", "r": "drafts a clean quote with line items, options, and terms"}, {"n": "Deal Strategist", "c": "Sales", "i": "💰", "r": "analyzes a stuck deal and lays out the next 3 moves to close it"}, {"n": "Upsell Architect", "c": "Sales", "i": "💰", "r": "designs an upsell/cross-sell path for an existing customer"}, {"n": "Pricing Strategist", "c": "Sales", "i": "💰", "r": "recommends pricing tiers and anchoring for an offer"}, {"n": "Sales Script Writer", "c": "Sales", "i": "💰", "r": "writes a phone cold-call script with hook, qualification, and close"}, {"n": "LinkedIn DM Closer", "c": "Sales", "i": "💰", "r": "writes a non-cringe LinkedIn outreach DM sequence"}, {"n": "Win-Loss Analyst", "c": "Sales", "i": "💰", "r": "turns a won or lost deal into lessons and a repeatable playbook"}, {"n": "Campaign Planner", "c": "Marketing", "i": "📣", "r": "builds a full marketing campaign: objective, audience, channels, calendar, KPIs"}, {"n": "Ad Copywriter", "c": "Marketing", "i": "📣", "r": "writes high-converting ad copy for Meta/Google with 5 variations"}, {"n": "Landing Page Copywriter", "c": "Marketing", "i": "📣", "r": "writes a full landing page: hero, benefits, proof, FAQ, CTA"}, {"n": "Funnel Architect", "c": "Marketing", "i": "📣", "r": "designs a marketing funnel from traffic to sale with each stage's asset"}, {"n": "Offer Designer", "c": "Marketing", "i": "📣", "r": "engineers an irresistible offer with bonuses, guarantee, and urgency"}, {"n": "Positioning Strategist", "c": "Marketing", "i": "📣", "r": "sharpens positioning and a one-line value proposition"}, {"n": "Competitor Analyst", "c": "Marketing", "i": "📣", "r": "analyzes a competitor and finds positioning gaps to exploit"}, {"n": "SEO Strategist", "c": "Marketing", "i": "📣", "r": "builds an SEO plan: keywords, content clusters, and quick wins"}, {"n": "Email Marketing Strategist", "c": "Marketing", "i": "📣", "r": "designs a lifecycle email program: welcome, nurture, win-back"}, {"n": "Webinar Promoter", "c": "Marketing", "i": "📣", "r": "writes the full promo sequence for a webinar or live event"}, {"n": "Lead Magnet Maker", "c": "Marketing", "i": "📣", "r": "designs a lead magnet and the opt-in copy around it"}, {"n": "Brand Voice Auditor", "c": "Marketing", "i": "📣", "r": "reviews copy against a brand voice and flags off-brand lines with fixes"}, {"n": "Press Release Writer", "c": "PR & Press", "i": "📰", "r": "writes a publication-ready press release in AP style"}, {"n": "Media Pitch Writer", "c": "PR & Press", "i": "📰", "r": "writes a journalist pitch that earns a reply and a placement"}, {"n": "Journalist Finder Brief", "c": "PR & Press", "i": "📰", "r": "builds a target media list strategy and the angle for each outlet"}, {"n": "HARO Responder", "c": "PR & Press", "i": "📰", "r": "writes a concise expert quote response to a reporter query"}, {"n": "Founder Story Writer", "c": "PR & Press", "i": "📰", "r": "crafts a compelling founder narrative for press and about pages"}, {"n": "Crisis Comms Agent", "c": "PR & Press", "i": "📰", "r": "drafts a calm, on-message statement for a PR issue"}, {"n": "Podcast Pitch Agent", "c": "PR & Press", "i": "📰", "r": "writes a pitch to get booked on relevant podcasts"}, {"n": "Award Submission Writer", "c": "PR & Press", "i": "📰", "r": "writes a persuasive industry award application"}, {"n": "Thought Leadership Ghostwriter", "c": "PR & Press", "i": "📰", "r": "ghostwrites an opinion piece in the founder's voice"}, {"n": "Newsjacking Agent", "c": "PR & Press", "i": "📰", "r": "ties the brand to a trending news story with a timely angle"}, {"n": "YouTube Scripter", "c": "Content & Social", "i": "🎬", "r": "writes a full YouTube script with hook, retention beats, and CTA"}, {"n": "YouTube Title & Thumb", "c": "Content & Social", "i": "🎬", "r": "generates 10 titles and thumbnail concepts for a video"}, {"n": "TikTok / Reels Scripter", "c": "Content & Social", "i": "🎬", "r": "writes a short vertical video script with hook and on-screen text"}, {"n": "X / Twitter Threader", "c": "Content & Social", "i": "🎬", "r": "writes a scroll-stopping thread with a strong first line"}, {"n": "LinkedIn Post Writer", "c": "Content & Social", "i": "🎬", "r": "writes a high-engagement LinkedIn post in a personal voice"}, {"n": "Instagram Caption Writer", "c": "Content & Social", "i": "🎬", "r": "writes captions with hooks and hashtags"}, {"n": "Blog Post Writer", "c": "Content & Social", "i": "🎬", "r": "writes a long-form SEO blog post with headers and a CTA"}, {"n": "Content Repurposer", "c": "Content & Social", "i": "🎬", "r": "turns one piece of content into 10 platform-native posts"}, {"n": "Hook Writer", "c": "Content & Social", "i": "🎬", "r": "generates 20 scroll-stopping opening hooks for any platform"}, {"n": "Content Calendar Builder", "c": "Content & Social", "i": "🎬", "r": "builds a 30-day content calendar across platforms"}, {"n": "Carousel Designer", "c": "Content & Social", "i": "🎬", "r": "scripts a swipeable carousel post slide by slide"}, {"n": "Comment Engager", "c": "Content & Social", "i": "🎬", "r": "writes thoughtful comment replies to grow engagement"}, {"n": "Brand Builder", "c": "Brand & Creative", "i": "🎨", "r": "develops brand positioning, voice, values, and messaging pillars"}, {"n": "Naming Agent", "c": "Brand & Creative", "i": "🎨", "r": "generates brand, product, or campaign names with rationale"}, {"n": "Tagline Writer", "c": "Brand & Creative", "i": "🎨", "r": "writes 15 tagline options for a brand or product"}, {"n": "Image Prompt Engineer", "c": "Brand & Creative", "i": "🎨", "r": "writes detailed image-generation prompts for fal.ai/Midjourney"}, {"n": "Packaging Copywriter", "c": "Brand & Creative", "i": "🎨", "r": "writes product packaging and label copy"}, {"n": "Story / World Builder", "c": "Brand & Creative", "i": "🎨", "r": "develops a recurring character or brand narrative (e.g. Granny)"}, {"n": "Mood Board Director", "c": "Brand & Creative", "i": "🎨", "r": "describes a visual direction: palette, type, imagery, references"}, {"n": "Ad Concept Director", "c": "Brand & Creative", "i": "🎨", "r": "ideates big ad concepts and storyboards for a campaign"}, {"n": "Voice & Tone Guide", "c": "Brand & Creative", "i": "🎨", "r": "writes a brand voice and tone guide with do/dont examples"}, {"n": "Rebrand Strategist", "c": "Brand & Creative", "i": "🎨", "r": "plans a rebrand: rationale, rollout, and risk"}, {"n": "Business Strategist", "c": "Ops & Strategy", "i": "⚙", "r": "stress-tests a business idea and lays out the path to revenue"}, {"n": "SOP Writer", "c": "Ops & Strategy", "i": "⚙", "r": "turns a process into a clear step-by-step standard operating procedure"}, {"n": "Hiring Agent", "c": "Ops & Strategy", "i": "⚙", "r": "writes a job description, scorecard, and interview questions for a role"}, {"n": "Project Planner", "c": "Ops & Strategy", "i": "⚙", "r": "breaks a goal into a phased project plan with milestones"}, {"n": "Meeting Summarizer", "c": "Ops & Strategy", "i": "⚙", "r": "turns rough notes into decisions, owners, and next steps"}, {"n": "OKR Architect", "c": "Ops & Strategy", "i": "⚙", "r": "drafts quarterly objectives and measurable key results"}, {"n": "Pricing & Margin Analyst", "c": "Ops & Strategy", "i": "⚙", "r": "models pricing, costs, and margin for an offer"}, {"n": "Negotiation Coach", "c": "Ops & Strategy", "i": "⚙", "r": "preps a negotiation: leverage, anchors, BATNA, scripts"}, {"n": "Vendor Evaluator", "c": "Ops & Strategy", "i": "⚙", "r": "compares vendors on cost, risk, and fit with a recommendation"}, {"n": "Risk Assessor", "c": "Ops & Strategy", "i": "⚙", "r": "identifies the top risks of a plan and mitigations"}, {"n": "Decision Analyst", "c": "Ops & Strategy", "i": "⚙", "r": "frames a tough decision with options, tradeoffs, and a recommendation"}, {"n": "Automation Finder", "c": "Ops & Strategy", "i": "⚙", "r": "spots repetitive work and proposes automations to remove it"}, {"n": "Code Reviewer", "c": "Dev & Technical", "i": "⌨", "r": "reviews code for bugs, security, and clarity (attach a repo)"}, {"n": "Repo Explainer", "c": "Dev & Technical", "i": "⌨", "r": "explains what a codebase does and how it's structured (attach a repo)"}, {"n": "Bug Hunter", "c": "Dev & Technical", "i": "⌨", "r": "analyzes an error or stack trace and proposes a fix"}, {"n": "Feature Spec Writer", "c": "Dev & Technical", "i": "⌨", "r": "turns an idea into a clear technical spec / PRD"}, {"n": "README Writer", "c": "Dev & Technical", "i": "⌨", "r": "writes a polished README for a repo (attach a repo)"}, {"n": "API Designer", "c": "Dev & Technical", "i": "⌨", "r": "designs a clean REST or function API for a feature"}, {"n": "Refactor Planner", "c": "Dev & Technical", "i": "⌨", "r": "plans a safe refactor of messy code (attach a repo)"}, {"n": "Deploy Runbook Writer", "c": "Dev & Technical", "i": "⌨", "r": "writes a deployment runbook with rollback steps"}, {"n": "Test Plan Writer", "c": "Dev & Technical", "i": "⌨", "r": "writes a test plan and key test cases for a feature"}, {"n": "Tech Stack Advisor", "c": "Dev & Technical", "i": "⌨", "r": "recommends a stack for a project with tradeoffs"}, {"n": "SQL / Query Helper", "c": "Dev & Technical", "i": "⌨", "r": "writes and explains database queries"}, {"n": "Landing Page Coder", "c": "Dev & Technical", "i": "⌨", "r": "writes a complete single-file HTML/CSS landing page"}, {"n": "Market Researcher", "c": "Research & Analysis", "i": "🔍", "r": "researches a market: size, trends, players, and opportunity"}, {"n": "Customer Persona Builder", "c": "Research & Analysis", "i": "🔍", "r": "builds detailed buyer personas with pains and triggers"}, {"n": "Survey Designer", "c": "Research & Analysis", "i": "🔍", "r": "designs a customer survey with unbiased questions"}, {"n": "Review Synthesizer", "c": "Research & Analysis", "i": "🔍", "r": "turns customer reviews/feedback into themes and actions"}, {"n": "Trend Spotter", "c": "Research & Analysis", "i": "🔍", "r": "identifies emerging trends in a niche and how to ride them"}, {"n": "Data Storyteller", "c": "Research & Analysis", "i": "🔍", "r": "turns numbers into a clear narrative with the headline insight"}, {"n": "Competitive Teardown", "c": "Research & Analysis", "i": "🔍", "r": "does a deep teardown of a competitor's funnel and offer"}, {"n": "Pricing Researcher", "c": "Research & Analysis", "i": "🔍", "r": "researches what competitors charge and benchmarks pricing"}, {"n": "Lead List Strategist", "c": "Research & Analysis", "i": "🔍", "r": "designs an ideal-customer-profile and where to find them"}, {"n": "Niche Validator", "c": "Research & Analysis", "i": "🔍", "r": "validates whether a niche is worth pursuing with evidence"}, {"n": "Support Reply Writer", "c": "Customer & Retention", "i": "🤝", "r": "writes empathetic, on-brand customer support replies"}, {"n": "Onboarding Designer", "c": "Customer & Retention", "i": "🤝", "r": "designs a customer onboarding flow that drives activation"}, {"n": "Churn Saver", "c": "Customer & Retention", "i": "🤝", "r": "writes a save offer and message for a customer about to cancel"}, {"n": "Review Requester", "c": "Customer & Retention", "i": "🤝", "r": "writes a message that gets happy customers to leave reviews"}, {"n": "FAQ Builder", "c": "Customer & Retention", "i": "🤝", "r": "builds a customer FAQ from common questions"}, {"n": "Case Study Writer", "c": "Customer & Retention", "i": "🤝", "r": "turns a customer win into a persuasive case study"}, {"n": "Community Manager", "c": "Customer & Retention", "i": "🤝", "r": "plans and writes engagement for a community or group"}];
 
 const SYSTEM_PROMPT = `You are JARVIS, the personal AI operating system for Benji (Benjamin Boyce), a serial entrepreneur based in Da Nang, Vietnam. You are loyal, sharp, dry-witted like the Iron Man JARVIS, and ruthlessly practical.
@@ -2884,6 +2909,65 @@ function renderConnections(){
   document.getElementById('bkImport').onchange=e=>{ if(e.target.files[0])importData(e.target.files[0]); };
 }
 
+/* ===================== V23: GRANNY CONTENT ENGINE ===================== */
+const GRANNY_REF = location.origin + '/assets/granny-ref.jpg';
+const GRANNY_ITEMS = [
+  ['Orange Juice','She is laughing joyfully, eyes bright, one hand raised mid-gesture as if telling a funny story to the viewer.','fresh whole oranges, some halved, and a glass pitcher of fresh-squeezed orange juice'],
+  ['Lime Juice','She is winking playfully with a sly grin and a thumbs-up toward the camera.','a pile of fresh whole and halved limes with a small bowl of fresh lime juice'],
+  ['Granulated Onion','She has a surprised wide-eyed "oh!" expression, holding up the bowl proudly toward the viewer.','a fresh whole onion, a cut onion half, and a bowl of granulated onion powder'],
+  ['Cilantro','She is mid-sentence with an animated, enthusiastic expression, leaning toward the camera.','a big fresh bunch of green cilantro with roots and leaves'],
+  ['Cumin','She has a warm confident smirk, one eyebrow raised, pinching a little seasoning between her fingers.','a small pile of whole cumin seeds and a bowl of ground cumin powder'],
+  ['Paprika','She is grinning ear to ear, both hands presenting the ingredient toward the viewer.','dried red paprika peppers and a bowl of red paprika powder']
+];
+function grannyPrompt(expr,raw){
+  return "Keep this exact elderly woman's identity — same face, same white curly hair, same gray cardigan, "+
+    "same warm rustic kitchen and lighting. She is NOT wearing any glasses, bare eyes. SQUARE 1:1 framing, slightly "+
+    "zoomed out: Granny centered with her HEAD NEAR THE TOP of the image, full upper body visible. "+expr+
+    " On the wooden table in front of her, arrange the raw ingredient: "+raw+". Keep the ENTIRE ingredient fully "+
+    "inside the frame, nothing cut off. Photorealistic candid lifestyle food photography, natural light, lively and "+
+    "engaging. No text, no words, no labels, no captions.";
+}
+async function falEdit(prompt){
+  const r=await fetch('/api/fal',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},cfgHeaders()),
+    body:JSON.stringify({model:'fal-ai/nano-banana/edit',input:{prompt,image_urls:[GRANNY_REF],num_images:1,aspect_ratio:'1:1'}})});
+  const d=await r.json().catch(()=>({}));
+  if(d.error) throw new Error(d.error);
+  return (d.images&&d.images[0])||null;
+}
+let CE_BUSY=false;
+async function grannyEngine(){
+  if(CE_BUSY)return; CE_BUSY=true;
+  const box=document.getElementById('ceBox'); if(!box){CE_BUSY=false;return;}
+  box.innerHTML='<div class="cewrap"><div class="dk" style="color:#ff2bd6;font-family:JetBrains Mono,monospace;letter-spacing:.15em">🌶 GRANNY CONTENT ENGINE</div>'+
+    '<div class="cestat" id="ceStat">Generating 6 on-brand Granny shots with image-to-image…</div>'+
+    '<div class="cegrid" id="ceGrid"></div></div>';
+  const grid=document.getElementById('ceGrid'), stat=document.getElementById('ceStat');
+  try{ speak('Firing up the Granny content engine, sir. Six fresh shots incoming.'); }catch{}
+  let done=0;
+  await Promise.all(GRANNY_ITEMS.map(async function(it){
+    const label=it[0],expr=it[1],raw=it[2];
+    const cell=document.createElement('div'); cell.className='cecard';
+    cell.innerHTML='<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;color:#67E8F9;font-size:11px" class="cestat">'+esc(label)+' …</div>';
+    grid.appendChild(cell);
+    try{
+      const url=await falEdit(grannyPrompt(expr,raw));
+      if(url){ cell.innerHTML='<img src="'+url+'" alt="'+esc(label)+'"><div class="cefoot"><a href="'+url+'" download="Granny-'+label.replace(/\s+/g,'-')+'.png" target="_blank">⤓ Save</a><button onclick="grannyToSocial(\''+encodeURIComponent(url)+'\',\''+esc(label)+'\')">↗ Schedule</button></div>'; }
+      else { cell.querySelector('div').textContent=label+': no image'; }
+    }catch(e){ cell.querySelector('div').textContent=label+': '+e.message; }
+    done++; stat.textContent=done+' / 6 ready'+(done===6?' · campaign complete ✓':'…');
+  }));
+  stat.textContent='6 / 6 ready · campaign complete ✓ — Save each, or Schedule to push to your social queue.';
+  try{ speak('Granny campaign complete. Six shots ready to post.'); }catch{}
+  CE_BUSY=false;
+}
+function grannyToSocial(encUrl,label){
+  const url=decodeURIComponent(encUrl);
+  try{ switchView('social'); }catch{}
+  const cap='New from GotBeef Granny 🌶 — '+label+' is in the marinade. #GotBeef #CarneAsada';
+  const q=load('benjios:socialqueue')||[]; q.push({img:url,caption:cap,label,ts:Date.now()}); save('benjios:socialqueue',q);
+  toast('Queued "'+label+'" for social. Open Social tab to schedule.');
+}
+
 /* boot-time init for all upgrades */
 function initUpgrades(){
   applyAccent(); rollEvents(); renderEvents(); wirePomo(); updateBadge();
@@ -2899,6 +2983,9 @@ function initUpgrades(){
   setTimeout(quietMailPoll,4000); setInterval(quietMailPoll,300000);
   updateTodayStrip(); setInterval(updateTodayStrip,60000);
   renderDash(); wireVorb(); setInterval(()=>{ if(S.view==='command')renderDash(); },60000);
+  const cb=document.getElementById('ccBrief'); if(cb&&!cb.dataset.w){ cb.dataset.w='1'; cb.onclick=()=>briefing(); }
+  const cg=document.getElementById('ccGranny'); if(cg&&!cg.dataset.w){ cg.dataset.w='1'; cg.onclick=()=>grannyEngine(); }
+  const cr=document.getElementById('ccRefresh'); if(cr&&!cr.dataset.w){ cr.dataset.w='1'; cr.onclick=async()=>{ cr.textContent='↻ Syncing…'; try{ STATS.stores=null; const d=await pingJSON('/api/shopify',{headers:cfgHeaders()},20000); if(d&&d.stores){STATS.stores=d.stores;STATS.fetchedAt=Date.now();} }catch{} renderDash(); cr.textContent='↻ Sync Live Data'; toast('Live data synced.'); }; }
   if(localStorage.getItem('benjios:alv')==='1'){ setTimeout(()=>{ ALV.on=true; startAlwaysListen(); },2500); }
   setInterval(()=>{ // daily auto-briefing
     const t=(KEYS.briefTime||'').trim(); if(!t)return;
@@ -2910,15 +2997,18 @@ function initUpgrades(){
 }
 
 const bootLines=[
-  'init benji_os v3.0 ............ OK',
+  'boot captain_jarvis ........... OK',
   'key vault + shopify intel ..... OK',
   'mount operations [6/6] ........ OK',
+  'arc reactor: <b style="color:#67E8F9">100%</b> ............. OK',
   'sync world clocks ............. OK',
   'link stores | social | inbox .. STANDBY',
+  'spin up agent swarm [105] ..... <b style="color:#67E8F9">ARMED</b>',
+  'content engine: GRANNY ........ <b style="color:#ff2bd6">LOADED</b>',
   'load directives + events ...... OK',
   'AI core: CLAUDE ............... <b style="color:#67E8F9">ONLINE</b>',
   '',
-  '<span class="dim">Good day, sir. All systems are go.</span>'
+  '<span class="dim">Good day, sir. Captain JARVIS online. All systems are go.</span>'
 ];
 /* (password gate defined below as the crash-proof version) */
 
