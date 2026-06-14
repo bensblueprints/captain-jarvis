@@ -3212,18 +3212,18 @@ startGate();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 <script>
-/* ===================== JARVIS CLOUD + SETUP (added) ===================== */
+/* ===================== JARVIS CLOUD + AUTH + SETUP (v2, boot-independent) ===================== */
 (function(){
   'use strict';
   var SB_KEY='benjios_bundle';
-  var _sb=null, _pushT=null, _applying=false, _inited=false;
+  var _sb=null, _clientP=null, _pushT=null, _applying=false, _cloudReady=false;
+  var _authResolve=null, _authReady=new Promise(function(r){ _authResolve=r; });
 
   function lsGet(k){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):null; }catch(e){ return null; } }
   function setup(){ return lsGet('benjios:setup')||{}; }
-  window.ownerName=function(){ return (setup().ownerName||'Captain').trim()||'Captain'; };
+  function toastSafe(t){ try{ if(typeof toast==='function') toast(t); }catch(e){} }
 
-  /* ---- Supabase config: env (/api/config) first, then local override ---- */
-  function sbCreds(){
+  function creds(){
     return fetch('/api/config').then(function(r){ return r.ok?r.json():{}; }).catch(function(){ return {}; })
       .then(function(j){
         var url=(j&&j.supabaseUrl)||'', key=(j&&j.supabaseAnonKey)||'';
@@ -3232,7 +3232,17 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
         return {url:url,key:key};
       });
   }
+  function client(){
+    if(_clientP) return _clientP;
+    _clientP=creds().then(function(c){
+      if(!c.url||!c.key||!window.supabase) return null;
+      try{ _sb=window.supabase.createClient(c.url,c.key); }catch(e){ _sb=null; }
+      return _sb;
+    });
+    return _clientP;
+  }
 
+  /* ---------- bundle sync ---------- */
   function collect(){
     if(typeof collectBundle==='function'){ try{ return collectBundle(); }catch(e){} }
     var out={}; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.indexOf('benjios:')===0) out[k]=localStorage.getItem(k); } return out;
@@ -3249,12 +3259,11 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
       try{ if(typeof S==='object'&&S&&S.view&&typeof switchView==='function') switchView(S.view); }catch(e){}
     } finally { _applying=false; }
   }
-
   function pull(silent){
     if(!_sb) return Promise.resolve(false);
     return _sb.from('jarvis_settings').select('value').eq('key',SB_KEY).maybeSingle().then(function(res){
-      if(res.error){ if(!silent&&typeof toast==='function') toast('Cloud pull error'); return false; }
-      if(res.data&&res.data.value){ applyBundleSafe(res.data.value); if(!silent&&typeof toast==='function') toast('Synced from cloud'); return true; }
+      if(res.error){ if(!silent) toastSafe('Cloud pull error'); return false; }
+      if(res.data&&res.data.value){ applyBundleSafe(res.data.value); if(!silent) toastSafe('Synced from cloud'); return true; }
       return push(true).then(function(){ return false; });
     }).catch(function(){ return false; });
   }
@@ -3262,39 +3271,35 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
     if(!_sb) return Promise.resolve(false);
     var row={ key:SB_KEY, value:collect(), updated_at:new Date().toISOString() };
     return _sb.from('jarvis_settings').upsert(row,{onConflict:'key'}).then(function(res){
-      if(res.error){ if(!silent&&typeof toast==='function') toast('Cloud push error'); return false; }
-      if(!silent&&typeof toast==='function') toast('Pushed to cloud'); return true;
+      if(res.error){ if(!silent) toastSafe('Cloud push error'); return false; }
+      if(!silent) toastSafe('Pushed to cloud'); return true;
     }).catch(function(){ return false; });
   }
-  function schedulePushSb(){ if(!_sb||_applying) return; clearTimeout(_pushT); _pushT=setTimeout(function(){ push(true); },1500); }
-  window._jarvisCloud={ pull:pull, push:push, status:function(){ return !!_sb; } };
+  function schedulePushSb(){ if(!_sb||_applying||!_cloudReady) return; clearTimeout(_pushT); _pushT=setTimeout(function(){ push(true); },1500); }
+  window._jarvisCloud={ pull:pull, push:push, status:function(){ return !!_sb&&_cloudReady; } };
 
-  function initCloud(){
-    if(_inited) return Promise.resolve(_sb); _inited=true;
-    return sbCreds().then(function(c){
-      if(!c.url||!c.key||!window.supabase){ return false; }
-      try{ _sb=window.supabase.createClient(c.url,c.key); }catch(e){ _sb=null; return false; }
-      return pull(true).then(function(){
-        try{
-          _sb.channel('jarvis_bundle').on('postgres_changes',
-            { event:'*', schema:'public', table:'jarvis_settings', filter:'key=eq.'+SB_KEY },
-            function(p){ if(p&&p.new&&p.new.value) applyBundleSafe(p.new.value); }
-          ).subscribe();
-        }catch(e){}
-        return true;
-      });
+  function hookSync(){
+    if(typeof schedulePush==='function' && !schedulePush._sbHooked){
+      var orig=schedulePush;
+      schedulePush=function(){ try{ orig.apply(this,arguments); }catch(e){} schedulePushSb(); };
+      schedulePush._sbHooked=true;
+    }
+  }
+  function cloudInit(){
+    if(!_sb||_cloudReady) return Promise.resolve(_cloudReady);
+    return pull(true).then(function(){
+      _cloudReady=true;
+      try{
+        _sb.channel('jarvis_bundle').on('postgres_changes',
+          { event:'*', schema:'public', table:'jarvis_settings', filter:'key=eq.'+SB_KEY },
+          function(p){ if(p&&p.new&&p.new.value) applyBundleSafe(p.new.value); }
+        ).subscribe();
+      }catch(e){}
+      return true;
     });
   }
 
-  /* ---- hook the app's existing sync trigger so saves push to cloud ---- */
-  function hookSync(){
-    if(typeof schedulePush==='function'){
-      var orig=schedulePush;
-      schedulePush=function(){ try{ orig.apply(this,arguments); }catch(e){} schedulePushSb(); };
-    }
-  }
-
-  /* ---- startup tasks ---- */
+  /* ---------- startup tasks ---------- */
   function runStartupTasks(){
     var t=setup().startupTasks||[];
     setTimeout(function(){
@@ -3304,11 +3309,77 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
         if(t.indexOf('status')>=0 && typeof checkStatus==='function'){ checkStatus(); }
         if(t.indexOf('sync')>=0){ pull(true); }
       }catch(e){}
-    },1400);
+    },1600);
   }
 
-  /* ---- setup / startup configuration modal ---- */
-  function ensureModal(){
+  /* ---------- auth gate ---------- */
+  function ensureAuthUI(){
+    if(document.getElementById('authGate')) return;
+    var g=document.createElement('div');
+    g.id='authGate';
+    g.style.cssText='position:fixed;inset:0;z-index:10001;display:none;align-items:center;justify-content:center;background:#060B14;color:#E8F0FA;font-family:Rajdhani,sans-serif';
+    g.innerHTML=''
+    +'<div style="width:340px;max-width:90vw;text-align:center">'
+    +'<div style="font-family:Michroma,sans-serif;font-size:20px;letter-spacing:.08em;color:#67E8F9;margin-bottom:6px">JARVIS</div>'
+    +'<div id="authTitle" style="font-family:Michroma,sans-serif;font-size:15px;letter-spacing:.1em;margin-bottom:6px">SIGN IN</div>'
+    +'<div id="authSub" style="color:#8DA2BE;font-size:13px;margin-bottom:18px">Sign in to access your command center.</div>'
+    +'<input id="authEmail" type="email" placeholder="Email" autocomplete="username" style="width:100%;padding:11px;margin-bottom:10px;background:#0E1B2E;border:1px solid #16273E;border-radius:8px;color:#E8F0FA;box-sizing:border-box">'
+    +'<input id="authPass" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;padding:11px;margin-bottom:14px;background:#0E1B2E;border:1px solid #16273E;border-radius:8px;color:#E8F0FA;box-sizing:border-box">'
+    +'<button id="authBtn" style="width:100%;padding:12px;background:#67E8F9;border:none;border-radius:8px;color:#04222b;font-weight:700;cursor:pointer;font-size:15px">Sign in</button>'
+    +'<div id="authMsg" style="min-height:18px;font-size:13px;margin-top:12px;color:#F87171"></div>'
+    +'<div style="font-size:13px;color:#8DA2BE;margin-top:6px"><span id="authToggle" style="color:#67E8F9;cursor:pointer">Create an account</span></div>'
+    +'</div>';
+    document.body.appendChild(g);
+    var mode='in';
+    function setMode(m){
+      mode=m;
+      document.getElementById('authTitle').textContent=m==='in'?'SIGN IN':'CREATE ACCOUNT';
+      document.getElementById('authSub').textContent=m==='in'?'Sign in to access your command center.':'Create your account to access this dashboard.';
+      document.getElementById('authBtn').textContent=m==='in'?'Sign in':'Create account';
+      document.getElementById('authToggle').textContent=m==='in'?'Create an account':'Have an account? Sign in';
+      document.getElementById('authMsg').textContent='';
+    }
+    document.getElementById('authToggle').onclick=function(){ setMode(mode==='in'?'up':'in'); };
+    document.getElementById('authBtn').onclick=function(){ submit(mode); };
+    document.getElementById('authPass').addEventListener('keydown',function(e){ if(e.key==='Enter') submit(mode); });
+    g._setMode=setMode;
+  }
+  function authMsg(t,ok){ var m=document.getElementById('authMsg'); if(m){ m.style.color=ok?'#34D399':'#F87171'; m.textContent=t; } }
+  function submit(mode){
+    var email=(document.getElementById('authEmail').value||'').trim();
+    var pass=document.getElementById('authPass').value||'';
+    if(!email||!pass){ authMsg('Enter your email and password.'); return; }
+    authMsg('Working...', true);
+    if(!_sb){ authMsg('Cloud not configured.'); return; }
+    if(mode==='up'){
+      _sb.auth.signUp({email:email,password:pass}).then(function(res){
+        if(res.error){ authMsg(res.error.message); return; }
+        if(res.data&&res.data.session){ authDone(); }
+        else { authMsg('Account created. Check your email to confirm, then sign in.', true); }
+      });
+    } else {
+      _sb.auth.signInWithPassword({email:email,password:pass}).then(function(res){
+        if(res.error){ authMsg(res.error.message); return; }
+        authDone();
+      });
+    }
+  }
+  function authDone(){ var g=document.getElementById('authGate'); if(g) g.style.display='none'; if(_authResolve){ _authResolve(true); _authResolve=null; } }
+  window.jarvisLogout=function(){ if(_sb) _sb.auth.signOut().then(function(){ location.reload(); }); else location.reload(); };
+
+  function requireAuth(){
+    if(!_sb) return Promise.resolve(true); // not configured -> don't block (template fallback)
+    return _sb.auth.getSession().then(function(res){
+      if(res&&res.data&&res.data.session){ return true; }
+      ensureAuthUI();
+      document.getElementById('authGate').style.display='flex';
+      try{ document.getElementById('authEmail').focus(); }catch(e){}
+      return _authReady;
+    }).catch(function(){ return true; });
+  }
+
+  /* ---------- setup / startup-configuration modal ---------- */
+  function ensureSetupModal(){
     if(document.getElementById('setupModal')) return;
     var wrap=document.createElement('div');
     wrap.id='setupModal';
@@ -3320,7 +3391,7 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
     +'<label style="font-weight:600;font-size:13px;display:block;margin-bottom:6px">What should JARVIS call you?</label>'
     +'<input id="suName" placeholder="e.g. Captain, Ben, Commander" style="width:100%;padding:10px;background:var(--panel-2,#0E1B2E);border:1px solid var(--line,#16273E);border-radius:8px;color:var(--text,#E8F0FA);margin-bottom:16px">'
     +'<label style="font-weight:600;font-size:13px;display:block;margin-bottom:6px">Tell JARVIS about you / your business</label>'
-    +'<textarea id="suBiz" rows="5" placeholder="What you do, your brands, goals, how you want help. JARVIS uses this as context." style="width:100%;padding:10px;background:var(--panel-2,#0E1B2E);border:1px solid var(--line,#16273E);border-radius:8px;color:var(--text,#E8F0FA);margin-bottom:16px;resize:vertical"></textarea>'
+    +'<textarea id="suBiz" rows="5" placeholder="What you do, your brands, goals, how you want help." style="width:100%;padding:10px;background:var(--panel-2,#0E1B2E);border:1px solid var(--line,#16273E);border-radius:8px;color:var(--text,#E8F0FA);margin-bottom:16px;resize:vertical"></textarea>'
     +'<label style="font-weight:600;font-size:13px;display:block;margin-bottom:8px">Run on startup</label>'
     +'<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px">'
     +'<label style="font-size:13px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="suBrief" style="accent-color:var(--cyan,#67E8F9)"> Daily briefing (stores, mail, schedule)</label>'
@@ -3333,17 +3404,19 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
     +'<input id="suSbUrl" placeholder="https://xxxx.supabase.co" style="width:100%;padding:9px;background:var(--panel-2,#0E1B2E);border:1px solid var(--line,#16273E);border-radius:8px;color:var(--text,#E8F0FA);margin-bottom:8px">'
     +'<input id="suSbKey" placeholder="Supabase anon key" style="width:100%;padding:9px;background:var(--panel-2,#0E1B2E);border:1px solid var(--line,#16273E);border-radius:8px;color:var(--text,#E8F0FA);margin-bottom:6px">'
     +'<div id="suSbMsg" style="font-size:12px;color:var(--muted,#8DA2BE);min-height:16px"></div></div>'
-    +'<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">'
-    +'<button id="suCancel" style="padding:10px 16px;background:transparent;border:1px solid var(--line,#16273E);border-radius:8px;color:var(--muted,#8DA2BE);cursor:pointer">Close</button>'
-    +'<button id="suSave" style="padding:10px 18px;background:var(--cyan,#67E8F9);border:none;border-radius:8px;color:#04222b;font-weight:700;cursor:pointer">Save</button>'
+    +'<div style="display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:14px">'
+    +'<span id="suLogout" style="color:var(--muted,#8DA2BE);font-size:12px;cursor:pointer">Log out</span>'
+    +'<span><button id="suCancel" style="padding:10px 16px;background:transparent;border:1px solid var(--line,#16273E);border-radius:8px;color:var(--muted,#8DA2BE);cursor:pointer">Close</button> '
+    +'<button id="suSave" style="padding:10px 18px;background:var(--cyan,#67E8F9);border:none;border-radius:8px;color:#04222b;font-weight:700;cursor:pointer">Save</button></span>'
     +'</div></div>';
     document.body.appendChild(wrap);
     wrap.addEventListener('click',function(e){ if(e.target===wrap) closeSetup(); });
     document.getElementById('suCancel').onclick=closeSetup;
     document.getElementById('suSave').onclick=saveSetup;
+    document.getElementById('suLogout').onclick=function(){ window.jarvisLogout(); };
   }
   function openSetup(){
-    ensureModal();
+    ensureSetupModal();
     var s=setup(), sb=lsGet('benjios:supabase')||{}, t=s.startupTasks||[];
     document.getElementById('suName').value=s.ownerName||'';
     document.getElementById('suBiz').value=s.businessProfile||'';
@@ -3353,12 +3426,11 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
     document.getElementById('suSync').checked=t.indexOf('sync')>=0;
     document.getElementById('suSbUrl').value=sb.url||'';
     document.getElementById('suSbKey').value=sb.anon||'';
-    document.getElementById('suSbMsg').textContent= _sb?'Connected.':'Not connected yet.';
+    document.getElementById('suSbMsg').textContent=(_sb&&_cloudReady)?'Connected.':'Not connected yet.';
     document.getElementById('setupModal').style.display='flex';
   }
   function closeSetup(){ var m=document.getElementById('setupModal'); if(m) m.style.display='none'; }
   window.openSetup=openSetup;
-
   function saveSetup(){
     var t=[];
     if(document.getElementById('suBrief').checked) t.push('briefing');
@@ -3371,13 +3443,9 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
     if(url||key){ try{ localStorage.setItem('benjios:supabase', JSON.stringify({url:url,anon:key})); }catch(e){} }
     if(typeof rebuildSystemPrompt==='function') rebuildSystemPrompt();
     if(typeof schedulePush==='function') schedulePush();
-    var msg=document.getElementById('suSbMsg');
-    if((url&&key)&&!_sb){ _inited=false; initCloud().then(function(ok){ if(msg) msg.textContent=ok?'Connected.':'Could not connect, check URL/key.'; }); }
-    if(typeof toast==='function') toast('Configuration saved.');
+    toastSafe('Configuration saved.');
     closeSetup();
   }
-
-  /* ---- add entry button into the Keys/Connections settings panel ---- */
   function injectSettingsButton(){
     var body=document.getElementById('connBody'); if(!body||document.getElementById('suEntryCard')) return;
     var card=document.createElement('div');
@@ -3386,135 +3454,23 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
     body.insertBefore(card, body.firstChild);
     document.getElementById('suOpenBtn').onclick=openSetup;
   }
-  if(typeof renderConnections==='function'){
+  if(typeof renderConnections==='function' && !renderConnections._sbWrapped){
     var _rc=renderConnections;
     renderConnections=function(){ var r=_rc.apply(this,arguments); try{ injectSettingsButton(); }catch(e){} return r; };
+    renderConnections._sbWrapped=true;
   }
 
-  /* ---- boot wrapper: init cloud, run startup tasks, first-run wizard ---- */
-  hookSync();
-  if(typeof boot==='function'){
-    var _boot=boot;
-    boot=function(){
-      var ret=_boot.apply(this,arguments);
-      Promise.resolve(ret).then(function(){
-        initCloud().then(function(){
-          runStartupTasks();
-          if(!lsGet('benjios:setup')){ setTimeout(openSetup, 900); }
-        });
-      });
-      return ret;
-    };
-  }
-})();
-
-</script>
-<script>
-/* ===================== JARVIS AUTH (email + password) ===================== */
-(function(){
-  'use strict';
-  var _ac=null, _resolve=null;
-  var _ready=new Promise(function(r){ _resolve=r; });
-  function lsGet(k){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):null; }catch(e){ return null; } }
-
-  function creds(){
-    return fetch('/api/config').then(function(r){ return r.ok?r.json():{}; }).catch(function(){ return {}; })
-      .then(function(j){
-        var url=(j&&j.supabaseUrl)||'', key=(j&&j.supabaseAnonKey)||'';
-        var o=lsGet('benjios:supabase')||{};
-        if(o.url) url=o.url; if(o.anon) key=o.anon;
-        return {url:url,key:key};
-      });
-  }
-  function client(){
-    if(_ac) return Promise.resolve(_ac);
-    return creds().then(function(c){
-      if(!c.url||!c.key||!window.supabase) return null;
-      _ac=window.supabase.createClient(c.url,c.key);
-      return _ac;
-    });
-  }
-
-  function ensureUI(){
-    if(document.getElementById('authGate')) return;
-    var g=document.createElement('div');
-    g.id='authGate';
-    g.style.cssText='position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;background:#060B14;color:#E8F0FA;font-family:Rajdhani,sans-serif';
-    g.innerHTML=''
-    +'<div style="width:340px;max-width:90vw;text-align:center">'
-    +'<div style="font-family:Michroma,sans-serif;font-size:20px;letter-spacing:.08em;color:#67E8F9;margin-bottom:6px">JARVIS</div>'
-    +'<div id="authTitle" style="font-family:Michroma,sans-serif;font-size:15px;letter-spacing:.1em;margin-bottom:6px">SIGN IN</div>'
-    +'<div id="authSub" style="color:#8DA2BE;font-size:13px;margin-bottom:18px">Sign in to access your command center.</div>'
-    +'<input id="authEmail" type="email" placeholder="Email" autocomplete="username" style="width:100%;padding:11px;margin-bottom:10px;background:#0E1B2E;border:1px solid #16273E;border-radius:8px;color:#E8F0FA;box-sizing:border-box">'
-    +'<input id="authPass" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;padding:11px;margin-bottom:14px;background:#0E1B2E;border:1px solid #16273E;border-radius:8px;color:#E8F0FA;box-sizing:border-box">'
-    +'<button id="authBtn" style="width:100%;padding:12px;background:#67E8F9;border:none;border-radius:8px;color:#04222b;font-weight:700;cursor:pointer;font-size:15px">Sign in</button>'
-    +'<div id="authMsg" style="min-height:18px;font-size:13px;margin-top:12px;color:#F87171"></div>'
-    +'<div style="font-size:13px;color:#8DA2BE;margin-top:6px">'
-    +'<span id="authToggle" style="color:#67E8F9;cursor:pointer">Create an account</span></div>'
-    +'</div>';
-    document.body.appendChild(g);
-    var mode='in';
-    function setMode(m){
-      mode=m;
-      document.getElementById('authTitle').textContent = m==='in'?'SIGN IN':'CREATE ACCOUNT';
-      document.getElementById('authSub').textContent = m==='in'?'Sign in to access your command center.':'Create your account to access this dashboard.';
-      document.getElementById('authBtn').textContent = m==='in'?'Sign in':'Create account';
-      document.getElementById('authPass').setAttribute('autocomplete', m==='in'?'current-password':'new-password');
-      document.getElementById('authToggle').textContent = m==='in'?'Create an account':'Have an account? Sign in';
-      document.getElementById('authMsg').textContent='';
-    }
-    document.getElementById('authToggle').onclick=function(){ setMode(mode==='in'?'up':'in'); };
-    document.getElementById('authBtn').onclick=function(){ submit(mode); };
-    document.getElementById('authPass').addEventListener('keydown',function(e){ if(e.key==='Enter') submit(mode); });
-  }
-  function msg(t,ok){ var m=document.getElementById('authMsg'); if(m){ m.style.color= ok?'#34D399':'#F87171'; m.textContent=t; } }
-
-  function submit(mode){
-    var email=(document.getElementById('authEmail').value||'').trim();
-    var pass=document.getElementById('authPass').value||'';
-    if(!email||!pass){ msg('Enter your email and password.'); return; }
-    msg('Working...', true);
-    client().then(function(c){
-      if(!c){ msg('Cloud not configured.'); return; }
-      if(mode==='up'){
-        c.auth.signUp({email:email,password:pass}).then(function(res){
-          if(res.error){ msg(res.error.message); return; }
-          if(res.data && res.data.session){ done(); }
-          else { msg('Account created. Check your email to confirm, then sign in.', true); }
-        });
-      } else {
-        c.auth.signInWithPassword({email:email,password:pass}).then(function(res){
-          if(res.error){ msg(res.error.message); return; }
-          done();
-        });
-      }
-    });
-  }
-  function done(){ var g=document.getElementById('authGate'); if(g) g.style.display='none'; if(_resolve){ _resolve(true); _resolve=null; } }
-
-  window.jarvisLogout=function(){ client().then(function(c){ if(c) c.auth.signOut().then(function(){ location.reload(); }); else location.reload(); }); };
-
-  function requireAuth(){
-    return client().then(function(c){
-      if(!c){ return true; } // Supabase not configured -> do not block (template fallback)
-      return c.auth.getSession().then(function(res){
-        if(res && res.data && res.data.session){ return true; }
-        ensureUI();
-        document.getElementById('authGate').style.display='flex';
-        try{ document.getElementById('authEmail').focus(); }catch(e){}
-        return _ready;
+  /* ---------- entry flow (runs on load, independent of boot timing) ---------- */
+  client().then(function(c){
+    hookSync();
+    if(!c){ return; } // Supabase not configured -> stay local-only
+    requireAuth().then(function(){
+      cloudInit().then(function(){
+        runStartupTasks();
+        if(!lsGet('benjios:setup')){ setTimeout(openSetup, 800); }
       });
     });
-  }
-
-  // Gate boot on auth BEFORE the cloud-sync init (this module loads after the cloud module,
-  // so this wrapper is outermost and runs first).
-  if(typeof boot==='function'){
-    var _boot=boot;
-    boot=function(){ var self=this, args=arguments;
-      return requireAuth().then(function(){ return _boot.apply(self,args); });
-    };
-  }
+  });
 })();
 
 </script>
