@@ -1143,16 +1143,27 @@ function pickVoice(){
 }
 if('speechSynthesis' in window){ pickVoice(); speechSynthesis.onvoiceschanged=pickVoice; }
 function speak(text, onDone){
-  if(!VOICE.on || !('speechSynthesis' in window)){ if(onDone)onDone(); return; }
-  speechSynthesis.cancel();
-  // strip markdown-ish characters so it reads cleanly
+  if(!VOICE.on || !text){ if(onDone)onDone(); return; }
   const clean=text.replace(/[*_`#>\-]+/g,' ').replace(/\s+/g,' ').slice(0,600);
-  const u=new SpeechSynthesisUtterance(clean);
-  if(preferredVoice)u.voice=preferredVoice;
-  u.rate=1.04; u.pitch=0.92;
-  u.onend=()=>{ ALV.lastTtsEnd=Date.now(); if(onDone)onDone(); };
-  u.onerror=()=>{ ALV.lastTtsEnd=Date.now(); if(onDone)onDone(); };
-  speechSynthesis.speak(u);
+  try{ speechSynthesis.cancel(); }catch(e){}
+  try{ if(window._ttsAudio){ window._ttsAudio.pause(); window._ttsAudio=null; } }catch(e){}
+  const finish=()=>{ ALV.lastTtsEnd=Date.now(); window._ttsBusy=false; if(onDone)onDone(); };
+  const browserSpeak=()=>{
+    if(!('speechSynthesis' in window)){ finish(); return; }
+    const u=new SpeechSynthesisUtterance(clean);
+    if(preferredVoice)u.voice=preferredVoice;
+    u.rate=1.04; u.pitch=0.92;
+    u.onend=finish; u.onerror=finish;
+    window._ttsBusy=true; speechSynthesis.speak(u);
+  };
+  if(KEYS.eleven){
+    window._ttsBusy=true;
+    const voiceId=KEYS.elVoice||KEYS.elHost||'cjVigY5qzO86Huf0OWal';
+    fetch('/api/tts',{method:'POST',headers:Object.assign({'Content-Type':'application/json'},cfgHeaders()),body:JSON.stringify({text:clean,voiceId:voiceId})})
+      .then(r=>{ if(!r.ok) throw new Error('tts'); return r.blob(); })
+      .then(b=>{ const a=new Audio(URL.createObjectURL(b)); window._ttsAudio=a; a.onended=finish; a.onerror=()=>{ browserSpeak(); }; a.play().catch(()=>{ browserSpeak(); }); })
+      .catch(()=>{ browserSpeak(); });
+  } else { browserSpeak(); }
 }
 
 function addMsgMute(role,text){
@@ -1207,7 +1218,7 @@ function sysPrompt(){ return SYSTEM_PROMPT+(PERSONAS[KEYS.persona||'jarvis']||''
 // Cloud providers, auto-detected from which keys are present
 function cloudProviders(){
   const list=[];
-  if(KEYS.anthropic) list.push({id:'claude',name:'Claude'});
+  if(KEYS.anthropic) list.push({id:'claude',name:'Claude Sonnet'});
   if(KEYS.groq) list.push({id:'groq',name:'Groq (Llama 3.3 70B)'});
   if(KEYS.kimi) list.push({id:'kimi',name:'Kimi K2'});
   return list;
@@ -1335,7 +1346,7 @@ const brSel=document.createElement('select'); brSel.innerHTML=['auto','node','cl
 brSel.onchange=()=>{ KEYS.brainMode=brSel.value; saveKeys(); };
 qr.appendChild(perSel); qr.appendChild(brSel);
 const provSel=document.createElement('select');
-function refreshProvSel(){ const provs=cloudProviders(); provSel.style.display=provs.length?'':'none'; provSel.innerHTML='<option value="">cloud: auto</option>'+provs.map(p2=>`<option value="${p2.id}"${KEYS.cloudProvider===p2.id?' selected':''}>cloud: ${p2.name}</option>`).join(''); }
+function refreshProvSel(){ const provs=cloudProviders(); if(!KEYS.cloudProvider && provs.some(p3=>p3.id==='claude')){ KEYS.cloudProvider='claude'; saveKeys(); } provSel.style.display=provs.length?'':'none'; provSel.title='Model used first (falls back to others if it fails)'; provSel.innerHTML='<option value="">Model: auto</option>'+provs.map(p2=>`<option value="${p2.id}"${KEYS.cloudProvider===p2.id?' selected':''}>\u25CF ${p2.name}</option>`).join(''); }
 provSel.onchange=()=>{ KEYS.cloudProvider=provSel.value; saveKeys(); }; refreshProvSel(); qr.appendChild(provSel);
 // NODE controller config (primary + fallback)
 const nodeBtn=document.createElement('button');
@@ -1407,7 +1418,7 @@ function startListen(){
 }
 function hfListen(){
   if(!VOICE.handsfree||!rec)return;
-  if(speechSynthesis.speaking){ setTimeout(hfListen,500); return; } // wait until it finishes talking
+  if(speechSynthesis.speaking||window._ttsBusy){ setTimeout(hfListen,500); return; } // wait until it finishes talking
   if(recOn)return;
   recOn=true; hfToggle.classList.add('listening'); setHFStatus('listening...'); input.value='';
   try{ rec.start(); }catch{ recOn=false; hfToggle.classList.remove('listening'); setTimeout(hfListen,600); }
