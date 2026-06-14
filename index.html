@@ -1870,7 +1870,7 @@ async function renderStudio(){
     document.querySelectorAll('[data-stdel]').forEach(el=>el.onclick=()=>{ const a=load('benjios:studioouts')||[]; a.splice(+el.dataset.stdel,1); save('benjios:studioouts',a); renderDownloads(); });
   }
   renderDownloads();
-  function saveOut(type,url,prompt,model){ const a=load('benjios:studioouts')||[]; a.unshift({type,url,prompt,model,at:Date.now()}); save('benjios:studioouts',a.slice(0,80)); renderDownloads(); }
+  function saveOut(type,url,prompt,model){ const a=load('benjios:studioouts')||[]; const _it={type,url,prompt,model,at:Date.now()}; a.unshift(_it); save('benjios:studioouts',a.slice(0,80)); renderDownloads(); if(typeof window.jarvisStoreMedia==='function'){ window.jarvisStoreMedia(url).then(function(perm){ if(perm&&perm!==url){ const arr=load('benjios:studioouts')||[]; const e=arr.find(x=>x.at===_it.at&&x.url===url); if(e){ e.url=perm; e.stored=true; save('benjios:studioouts',arr); try{renderDownloads();}catch(_e){} } } }); } }
   document.getElementById('stGen').onclick=async()=>{
     const m=curModel(); const prompt=document.getElementById('stPrompt').value.trim();
     if((m.img||m.ref)&&!uploads.length){ toast('Upload an image first (wait for it to finish loading).'); return; }
@@ -3459,6 +3459,21 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
     renderConnections=function(){ var r=_rc.apply(this,arguments); try{ injectSettingsButton(); }catch(e){} return r; };
     renderConnections._sbWrapped=true;
   }
+
+  /* ---------- studio media persistence ---------- */
+  window.jarvisStoreMedia=function(src){
+    if(!_sb||!_cloudReady||!src) return Promise.resolve(src);
+    return fetch(src).then(function(r){ if(!r.ok) throw new Error('fetch'); return r.blob(); }).then(function(blob){
+      var ct=blob.type||'image/png';
+      var ext=ct.indexOf('video')>=0?'mp4':((ct.split('/')[1]||'png').split('+')[0]);
+      var path='media/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+ext;
+      return _sb.storage.from('studio').upload(path,blob,{contentType:ct,upsert:false}).then(function(res){
+        if(res.error) return src;
+        var pub=_sb.storage.from('studio').getPublicUrl(path);
+        return (pub&&pub.data&&pub.data.publicUrl)||src;
+      });
+    }).catch(function(){ return src; });
+  };
 
   /* ---------- entry flow (runs on load, independent of boot timing) ---------- */
   client().then(function(c){
