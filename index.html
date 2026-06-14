@@ -3409,5 +3409,114 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
 })();
 
 </script>
+<script>
+/* ===================== JARVIS AUTH (email + password) ===================== */
+(function(){
+  'use strict';
+  var _ac=null, _resolve=null;
+  var _ready=new Promise(function(r){ _resolve=r; });
+  function lsGet(k){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):null; }catch(e){ return null; } }
+
+  function creds(){
+    return fetch('/api/config').then(function(r){ return r.ok?r.json():{}; }).catch(function(){ return {}; })
+      .then(function(j){
+        var url=(j&&j.supabaseUrl)||'', key=(j&&j.supabaseAnonKey)||'';
+        var o=lsGet('benjios:supabase')||{};
+        if(o.url) url=o.url; if(o.anon) key=o.anon;
+        return {url:url,key:key};
+      });
+  }
+  function client(){
+    if(_ac) return Promise.resolve(_ac);
+    return creds().then(function(c){
+      if(!c.url||!c.key||!window.supabase) return null;
+      _ac=window.supabase.createClient(c.url,c.key);
+      return _ac;
+    });
+  }
+
+  function ensureUI(){
+    if(document.getElementById('authGate')) return;
+    var g=document.createElement('div');
+    g.id='authGate';
+    g.style.cssText='position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;background:#060B14;color:#E8F0FA;font-family:Rajdhani,sans-serif';
+    g.innerHTML=''
+    +'<div style="width:340px;max-width:90vw;text-align:center">'
+    +'<div style="font-family:Michroma,sans-serif;font-size:20px;letter-spacing:.08em;color:#67E8F9;margin-bottom:6px">JARVIS</div>'
+    +'<div id="authTitle" style="font-family:Michroma,sans-serif;font-size:15px;letter-spacing:.1em;margin-bottom:6px">SIGN IN</div>'
+    +'<div id="authSub" style="color:#8DA2BE;font-size:13px;margin-bottom:18px">Sign in to access your command center.</div>'
+    +'<input id="authEmail" type="email" placeholder="Email" autocomplete="username" style="width:100%;padding:11px;margin-bottom:10px;background:#0E1B2E;border:1px solid #16273E;border-radius:8px;color:#E8F0FA;box-sizing:border-box">'
+    +'<input id="authPass" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;padding:11px;margin-bottom:14px;background:#0E1B2E;border:1px solid #16273E;border-radius:8px;color:#E8F0FA;box-sizing:border-box">'
+    +'<button id="authBtn" style="width:100%;padding:12px;background:#67E8F9;border:none;border-radius:8px;color:#04222b;font-weight:700;cursor:pointer;font-size:15px">Sign in</button>'
+    +'<div id="authMsg" style="min-height:18px;font-size:13px;margin-top:12px;color:#F87171"></div>'
+    +'<div style="font-size:13px;color:#8DA2BE;margin-top:6px">'
+    +'<span id="authToggle" style="color:#67E8F9;cursor:pointer">Create an account</span></div>'
+    +'</div>';
+    document.body.appendChild(g);
+    var mode='in';
+    function setMode(m){
+      mode=m;
+      document.getElementById('authTitle').textContent = m==='in'?'SIGN IN':'CREATE ACCOUNT';
+      document.getElementById('authSub').textContent = m==='in'?'Sign in to access your command center.':'Create your account to access this dashboard.';
+      document.getElementById('authBtn').textContent = m==='in'?'Sign in':'Create account';
+      document.getElementById('authPass').setAttribute('autocomplete', m==='in'?'current-password':'new-password');
+      document.getElementById('authToggle').textContent = m==='in'?'Create an account':'Have an account? Sign in';
+      document.getElementById('authMsg').textContent='';
+    }
+    document.getElementById('authToggle').onclick=function(){ setMode(mode==='in'?'up':'in'); };
+    document.getElementById('authBtn').onclick=function(){ submit(mode); };
+    document.getElementById('authPass').addEventListener('keydown',function(e){ if(e.key==='Enter') submit(mode); });
+  }
+  function msg(t,ok){ var m=document.getElementById('authMsg'); if(m){ m.style.color= ok?'#34D399':'#F87171'; m.textContent=t; } }
+
+  function submit(mode){
+    var email=(document.getElementById('authEmail').value||'').trim();
+    var pass=document.getElementById('authPass').value||'';
+    if(!email||!pass){ msg('Enter your email and password.'); return; }
+    msg('Working...', true);
+    client().then(function(c){
+      if(!c){ msg('Cloud not configured.'); return; }
+      if(mode==='up'){
+        c.auth.signUp({email:email,password:pass}).then(function(res){
+          if(res.error){ msg(res.error.message); return; }
+          if(res.data && res.data.session){ done(); }
+          else { msg('Account created. Check your email to confirm, then sign in.', true); }
+        });
+      } else {
+        c.auth.signInWithPassword({email:email,password:pass}).then(function(res){
+          if(res.error){ msg(res.error.message); return; }
+          done();
+        });
+      }
+    });
+  }
+  function done(){ var g=document.getElementById('authGate'); if(g) g.style.display='none'; if(_resolve){ _resolve(true); _resolve=null; } }
+
+  window.jarvisLogout=function(){ client().then(function(c){ if(c) c.auth.signOut().then(function(){ location.reload(); }); else location.reload(); }); };
+
+  function requireAuth(){
+    return client().then(function(c){
+      if(!c){ return true; } // Supabase not configured -> do not block (template fallback)
+      return c.auth.getSession().then(function(res){
+        if(res && res.data && res.data.session){ return true; }
+        ensureUI();
+        document.getElementById('authGate').style.display='flex';
+        try{ document.getElementById('authEmail').focus(); }catch(e){}
+        return _ready;
+      });
+    });
+  }
+
+  // Gate boot on auth BEFORE the cloud-sync init (this module loads after the cloud module,
+  // so this wrapper is outermost and runs first).
+  if(typeof boot==='function'){
+    var _boot=boot;
+    boot=function(){ var self=this, args=arguments;
+      return requireAuth().then(function(){ return _boot.apply(self,args); });
+    };
+  }
+})();
+
+</script>
 </body>
 </html>
