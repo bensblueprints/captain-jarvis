@@ -1,4 +1,7 @@
 [build]
   publish = "."
+  command = "npm install"
 
 # Functions are auto-detected in netlify/functions
+[functions]
+  node_bundler = "esbuild"
