@@ -3027,8 +3027,10 @@ async function boot(){
 function _rng(a,b){ return a+Math.random()*(b-a); }
 function wakeGreeting(){
   // Shopify sales today: use real if we have it, otherwise a live-looking figure in your range
-  let sales=0; try{ if(STATS.stores) sales=STATS.stores.reduce((s,x)=>s+(x.today||0),0); }catch{}
-  if(!sales||sales<=0) sales=Math.round(_rng(2391,5932));
+  let real=0; try{ if(STATS.stores) real=STATS.stores.reduce((s,x)=>s+(x.today||0),0); }catch{}
+  // always show a random figure in range UNTIL real sales exceed the max, then show the real number
+  const RMIN=2391, RMAX=5932;
+  const sales=(real>RMAX)?real:Math.round(_rng(RMIN,RMAX));
   const conv=_rng(2.4,7.8).toFixed(1);
   const now=new Date();
   const isToday=d=>{ try{ const x=new Date(d); return x.getFullYear()===now.getFullYear()&&x.getMonth()===now.getMonth()&&x.getDate()===now.getDate(); }catch{ return false; } };
