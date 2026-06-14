@@ -1,0 +1,10 @@
+{
+  "name": "captain-jarvis",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "imapflow": "^1.0.171",
+    "nodemailer": "^6.9.15",
+    "mailparser": "^3.7.1"
+  }
+}

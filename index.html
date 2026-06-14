@@ -3467,7 +3467,7 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
   }
   if(typeof renderConnections==='function' && !renderConnections._sbWrapped){
     var _rc=renderConnections;
-    renderConnections=function(){ var r=_rc.apply(this,arguments); try{ injectSettingsButton(); }catch(e){} return r; };
+    renderConnections=function(){ var r=_rc.apply(this,arguments); try{ injectSettingsButton(); }catch(e){} try{ injectMailCard(); }catch(e){} return r; };
     renderConnections._sbWrapped=true;
   }
 
@@ -3485,6 +3485,32 @@ if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch
       });
     }).catch(function(){ return src; });
   };
+
+  /* ---------- direct mail (IMAP/SMTP, no bridge) ---------- */
+  function mailCfg(){ return lsGet('benjios:maildirect')||{}; }
+  function mailHeaders(){ var h={'Content-Type':'application/json'}; try{ if(typeof cfgHeaders==='function'){ var c=cfgHeaders(); for(var k in c) h[k]=c[k]; } }catch(e){} return h; }
+  function mailCall(payload){
+    var cfg=mailCfg();
+    var bd=Object.assign({email:cfg.email,password:cfg.password,imapHost:cfg.imapHost,smtpHost:cfg.smtpHost}, payload);
+    return fetch('/api/mail',{method:'POST',headers:mailHeaders(),body:JSON.stringify(bd)}).then(function(r){ return r.json(); }).catch(function(e){ return {error:String(e)}; });
+  }
+  window.jarvisMail={ test:function(){return mailCall({action:'test'});}, inbox:function(n){return mailCall({action:'inbox',limit:n||25});}, message:function(uid){return mailCall({action:'message',uid:uid});}, send:function(to,subject,body){return mailCall({action:'send',to:to,subject:subject,body:body});} };
+  function injectMailCard(){
+    var body=document.getElementById('connBody'); if(!body||document.getElementById('mailDirectCard')) return;
+    var cfg=mailCfg();
+    var E=(typeof esc==='function')?esc:function(x){return x==null?'':String(x);};
+    var card=document.createElement('div'); card.id='mailDirectCard'; card.className='card'; card.style.marginBottom='16px';
+    card.innerHTML='<div class="k">Mail (direct — no bridge)</div>'
+      +'<div class="meta" style="margin:6px 0 10px">Connects straight to your mailbox over IMAP/SMTP. Host auto-detects from your email (Gmail, Outlook, and more). Use an app password, not your normal login password.</div>'
+      +'<div class="addrow"><input id="mdEmail" placeholder="you@domain.com" value="'+E(cfg.email||'')+'" style="flex:2;min-width:180px"><input id="mdPass" type="password" placeholder="app password" value="'+E(cfg.password||'')+'" style="flex:2;min-width:160px"></div>'
+      +'<div class="addrow"><input id="mdImap" placeholder="IMAP host (optional override)" value="'+E(cfg.imapHost||'')+'" style="flex:1;min-width:140px"><input id="mdSmtp" placeholder="SMTP host (optional override)" value="'+E(cfg.smtpHost||'')+'" style="flex:1;min-width:140px"><button class="btn" id="mdSave">Save</button><button class="btn" id="mdTest">Test</button></div>'
+      +'<div id="mdMsg" class="meta"></div><div id="mdInbox" style="margin-top:8px"></div>';
+    body.insertBefore(card, body.children[1]||null);
+    function save(){ var c={email:document.getElementById('mdEmail').value.trim(),password:document.getElementById('mdPass').value,imapHost:document.getElementById('mdImap').value.trim(),smtpHost:document.getElementById('mdSmtp').value.trim()}; try{localStorage.setItem('benjios:maildirect',JSON.stringify(c));}catch(e){} if(typeof schedulePush==='function')schedulePush(); }
+    function renderPreview(r){ var el=document.getElementById('mdInbox'); if(!el)return; if(r.error){ el.innerHTML='<div class="meta">Inbox error: '+E(r.error)+'</div>'; return; } var ms=r.messages||[]; el.innerHTML=ms.length?ms.map(function(x){ return '<div class="task"><div class="body"><div class="title">'+E(x.subject)+'</div><div class="biz">'+E(x.name||x.from)+' · '+(x.date?new Date(x.date).toLocaleString():'')+'</div></div></div>'; }).join(''):'<div class="empty">Inbox empty.</div>'; }
+    document.getElementById('mdSave').onclick=function(){ save(); document.getElementById('mdMsg').style.color=''; document.getElementById('mdMsg').textContent='Saved.'; };
+    document.getElementById('mdTest').onclick=function(){ save(); var m=document.getElementById('mdMsg'); m.style.color=''; m.textContent='Connecting...'; window.jarvisMail.test().then(function(r){ if(r.error){ m.style.color='#F87171'; m.textContent='Failed: '+r.error; } else { m.style.color='#34D399'; m.textContent='Connected. '+(r.messages||0)+' messages. Host: '+((r.detected&&r.detected.imapHost)||'auto'); window.jarvisMail.inbox(15).then(renderPreview); } }); };
+  }
 
   /* ---------- entry flow (runs on load, independent of boot timing) ---------- */
   client().then(function(c){
