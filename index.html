@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Michroma&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
   --bg:#060B14;--panel:#0B1524;--panel-2:#0E1B2E;--line:#16273E;
@@ -442,7 +443,7 @@ main{grid-area:main;overflow:hidden;position:relative}
         <button id="termMic" title="Voice">⏺</button>
         <button id="termSend" title="Get command">➤</button>
       </div>
-      <div class="termhint">Tunnel: <a href="https://vscode.dev/tunnel/desktop-o6dtcro" target="_blank" rel="noopener">open your desktop terminal</a> · paste commands there</div>
+      <div class="termhint">Tunnel: <a href="https://vscode.dev/tunnel/" target="_blank" rel="noopener">open your desktop terminal</a> · paste commands there</div>
     </section>
 
     <section class="view" id="view-crm">
@@ -503,29 +504,26 @@ const S = { tasks:[], events:[], history:[], thinking:false, view:'command' };
 const APP_VERSION='v28 · GPT2 BEEF';
 const AGENT_LIB=[{"n": "Cold Email Sequencer", "c": "Email & Outreach", "i": "✉", "r": "writes a full 5-touch cold email sequence with subject lines, timing, and break-up email"}, {"n": "Cold Email Single", "c": "Email & Outreach", "i": "✉", "r": "writes one sharp cold email under 120 words with a clear CTA"}, {"n": "Follow-up Writer", "c": "Email & Outreach", "i": "✉", "r": "writes a polite persistent follow-up that gets a reply without being annoying"}, {"n": "Reply Handler", "c": "Email & Outreach", "i": "✉", "r": "drafts the best reply to an inbound email, matching tone and moving the deal forward"}, {"n": "Subject Line Lab", "c": "Email & Outreach", "i": "✉", "r": "generates 15 high-open-rate subject lines for a given email"}, {"n": "Newsletter Writer", "c": "Email & Outreach", "i": "✉", "r": "writes an engaging email newsletter with a hook, value, and CTA"}, {"n": "Re-engagement Agent", "c": "Email & Outreach", "i": "✉", "r": "writes a win-back email to a cold lead or lapsed customer"}, {"n": "Meeting Booker", "c": "Email & Outreach", "i": "✉", "r": "writes an email that books a call, with a clear time proposal and calendar nudge"}, {"n": "Referral Asker", "c": "Email & Outreach", "i": "✉", "r": "writes an email that asks a happy client for a referral or testimonial"}, {"n": "Apology / Service Recovery", "c": "Email & Outreach", "i": "✉", "r": "writes a professional apology email that keeps the relationship and offers a fix"}, {"n": "Discovery Call Prep", "c": "Sales", "i": "💰", "r": "builds a discovery call agenda with questions, qualification, and objections to expect"}, {"n": "Objection Crusher", "c": "Sales", "i": "💰", "r": "gives crisp rebuttals to the 8 most common sales objections for the offer"}, {"n": "Proposal Writer", "c": "Sales", "i": "💰", "r": "writes a persuasive one-page proposal with scope, price, and next step"}, {"n": "Quote Builder", "c": "Sales", "i": "💰", "r": "drafts a clean quote with line items, options, and terms"}, {"n": "Deal Strategist", "c": "Sales", "i": "💰", "r": "analyzes a stuck deal and lays out the next 3 moves to close it"}, {"n": "Upsell Architect", "c": "Sales", "i": "💰", "r": "designs an upsell/cross-sell path for an existing customer"}, {"n": "Pricing Strategist", "c": "Sales", "i": "💰", "r": "recommends pricing tiers and anchoring for an offer"}, {"n": "Sales Script Writer", "c": "Sales", "i": "💰", "r": "writes a phone cold-call script with hook, qualification, and close"}, {"n": "LinkedIn DM Closer", "c": "Sales", "i": "💰", "r": "writes a non-cringe LinkedIn outreach DM sequence"}, {"n": "Win-Loss Analyst", "c": "Sales", "i": "💰", "r": "turns a won or lost deal into lessons and a repeatable playbook"}, {"n": "Campaign Planner", "c": "Marketing", "i": "📣", "r": "builds a full marketing campaign: objective, audience, channels, calendar, KPIs"}, {"n": "Ad Copywriter", "c": "Marketing", "i": "📣", "r": "writes high-converting ad copy for Meta/Google with 5 variations"}, {"n": "Landing Page Copywriter", "c": "Marketing", "i": "📣", "r": "writes a full landing page: hero, benefits, proof, FAQ, CTA"}, {"n": "Funnel Architect", "c": "Marketing", "i": "📣", "r": "designs a marketing funnel from traffic to sale with each stage's asset"}, {"n": "Offer Designer", "c": "Marketing", "i": "📣", "r": "engineers an irresistible offer with bonuses, guarantee, and urgency"}, {"n": "Positioning Strategist", "c": "Marketing", "i": "📣", "r": "sharpens positioning and a one-line value proposition"}, {"n": "Competitor Analyst", "c": "Marketing", "i": "📣", "r": "analyzes a competitor and finds positioning gaps to exploit"}, {"n": "SEO Strategist", "c": "Marketing", "i": "📣", "r": "builds an SEO plan: keywords, content clusters, and quick wins"}, {"n": "Email Marketing Strategist", "c": "Marketing", "i": "📣", "r": "designs a lifecycle email program: welcome, nurture, win-back"}, {"n": "Webinar Promoter", "c": "Marketing", "i": "📣", "r": "writes the full promo sequence for a webinar or live event"}, {"n": "Lead Magnet Maker", "c": "Marketing", "i": "📣", "r": "designs a lead magnet and the opt-in copy around it"}, {"n": "Brand Voice Auditor", "c": "Marketing", "i": "📣", "r": "reviews copy against a brand voice and flags off-brand lines with fixes"}, {"n": "Press Release Writer", "c": "PR & Press", "i": "📰", "r": "writes a publication-ready press release in AP style"}, {"n": "Media Pitch Writer", "c": "PR & Press", "i": "📰", "r": "writes a journalist pitch that earns a reply and a placement"}, {"n": "Journalist Finder Brief", "c": "PR & Press", "i": "📰", "r": "builds a target media list strategy and the angle for each outlet"}, {"n": "HARO Responder", "c": "PR & Press", "i": "📰", "r": "writes a concise expert quote response to a reporter query"}, {"n": "Founder Story Writer", "c": "PR & Press", "i": "📰", "r": "crafts a compelling founder narrative for press and about pages"}, {"n": "Crisis Comms Agent", "c": "PR & Press", "i": "📰", "r": "drafts a calm, on-message statement for a PR issue"}, {"n": "Podcast Pitch Agent", "c": "PR & Press", "i": "📰", "r": "writes a pitch to get booked on relevant podcasts"}, {"n": "Award Submission Writer", "c": "PR & Press", "i": "📰", "r": "writes a persuasive industry award application"}, {"n": "Thought Leadership Ghostwriter", "c": "PR & Press", "i": "📰", "r": "ghostwrites an opinion piece in the founder's voice"}, {"n": "Newsjacking Agent", "c": "PR & Press", "i": "📰", "r": "ties the brand to a trending news story with a timely angle"}, {"n": "YouTube Scripter", "c": "Content & Social", "i": "🎬", "r": "writes a full YouTube script with hook, retention beats, and CTA"}, {"n": "YouTube Title & Thumb", "c": "Content & Social", "i": "🎬", "r": "generates 10 titles and thumbnail concepts for a video"}, {"n": "TikTok / Reels Scripter", "c": "Content & Social", "i": "🎬", "r": "writes a short vertical video script with hook and on-screen text"}, {"n": "X / Twitter Threader", "c": "Content & Social", "i": "🎬", "r": "writes a scroll-stopping thread with a strong first line"}, {"n": "LinkedIn Post Writer", "c": "Content & Social", "i": "🎬", "r": "writes a high-engagement LinkedIn post in a personal voice"}, {"n": "Instagram Caption Writer", "c": "Content & Social", "i": "🎬", "r": "writes captions with hooks and hashtags"}, {"n": "Blog Post Writer", "c": "Content & Social", "i": "🎬", "r": "writes a long-form SEO blog post with headers and a CTA"}, {"n": "Content Repurposer", "c": "Content & Social", "i": "🎬", "r": "turns one piece of content into 10 platform-native posts"}, {"n": "Hook Writer", "c": "Content & Social", "i": "🎬", "r": "generates 20 scroll-stopping opening hooks for any platform"}, {"n": "Content Calendar Builder", "c": "Content & Social", "i": "🎬", "r": "builds a 30-day content calendar across platforms"}, {"n": "Carousel Designer", "c": "Content & Social", "i": "🎬", "r": "scripts a swipeable carousel post slide by slide"}, {"n": "Comment Engager", "c": "Content & Social", "i": "🎬", "r": "writes thoughtful comment replies to grow engagement"}, {"n": "Brand Builder", "c": "Brand & Creative", "i": "🎨", "r": "develops brand positioning, voice, values, and messaging pillars"}, {"n": "Naming Agent", "c": "Brand & Creative", "i": "🎨", "r": "generates brand, product, or campaign names with rationale"}, {"n": "Tagline Writer", "c": "Brand & Creative", "i": "🎨", "r": "writes 15 tagline options for a brand or product"}, {"n": "Image Prompt Engineer", "c": "Brand & Creative", "i": "🎨", "r": "writes detailed image-generation prompts for fal.ai/Midjourney"}, {"n": "Packaging Copywriter", "c": "Brand & Creative", "i": "🎨", "r": "writes product packaging and label copy"}, {"n": "Story / World Builder", "c": "Brand & Creative", "i": "🎨", "r": "develops a recurring character or brand narrative (e.g. Granny)"}, {"n": "Mood Board Director", "c": "Brand & Creative", "i": "🎨", "r": "describes a visual direction: palette, type, imagery, references"}, {"n": "Ad Concept Director", "c": "Brand & Creative", "i": "🎨", "r": "ideates big ad concepts and storyboards for a campaign"}, {"n": "Voice & Tone Guide", "c": "Brand & Creative", "i": "🎨", "r": "writes a brand voice and tone guide with do/dont examples"}, {"n": "Rebrand Strategist", "c": "Brand & Creative", "i": "🎨", "r": "plans a rebrand: rationale, rollout, and risk"}, {"n": "Business Strategist", "c": "Ops & Strategy", "i": "⚙", "r": "stress-tests a business idea and lays out the path to revenue"}, {"n": "SOP Writer", "c": "Ops & Strategy", "i": "⚙", "r": "turns a process into a clear step-by-step standard operating procedure"}, {"n": "Hiring Agent", "c": "Ops & Strategy", "i": "⚙", "r": "writes a job description, scorecard, and interview questions for a role"}, {"n": "Project Planner", "c": "Ops & Strategy", "i": "⚙", "r": "breaks a goal into a phased project plan with milestones"}, {"n": "Meeting Summarizer", "c": "Ops & Strategy", "i": "⚙", "r": "turns rough notes into decisions, owners, and next steps"}, {"n": "OKR Architect", "c": "Ops & Strategy", "i": "⚙", "r": "drafts quarterly objectives and measurable key results"}, {"n": "Pricing & Margin Analyst", "c": "Ops & Strategy", "i": "⚙", "r": "models pricing, costs, and margin for an offer"}, {"n": "Negotiation Coach", "c": "Ops & Strategy", "i": "⚙", "r": "preps a negotiation: leverage, anchors, BATNA, scripts"}, {"n": "Vendor Evaluator", "c": "Ops & Strategy", "i": "⚙", "r": "compares vendors on cost, risk, and fit with a recommendation"}, {"n": "Risk Assessor", "c": "Ops & Strategy", "i": "⚙", "r": "identifies the top risks of a plan and mitigations"}, {"n": "Decision Analyst", "c": "Ops & Strategy", "i": "⚙", "r": "frames a tough decision with options, tradeoffs, and a recommendation"}, {"n": "Automation Finder", "c": "Ops & Strategy", "i": "⚙", "r": "spots repetitive work and proposes automations to remove it"}, {"n": "Code Reviewer", "c": "Dev & Technical", "i": "⌨", "r": "reviews code for bugs, security, and clarity (attach a repo)"}, {"n": "Repo Explainer", "c": "Dev & Technical", "i": "⌨", "r": "explains what a codebase does and how it's structured (attach a repo)"}, {"n": "Bug Hunter", "c": "Dev & Technical", "i": "⌨", "r": "analyzes an error or stack trace and proposes a fix"}, {"n": "Feature Spec Writer", "c": "Dev & Technical", "i": "⌨", "r": "turns an idea into a clear technical spec / PRD"}, {"n": "README Writer", "c": "Dev & Technical", "i": "⌨", "r": "writes a polished README for a repo (attach a repo)"}, {"n": "API Designer", "c": "Dev & Technical", "i": "⌨", "r": "designs a clean REST or function API for a feature"}, {"n": "Refactor Planner", "c": "Dev & Technical", "i": "⌨", "r": "plans a safe refactor of messy code (attach a repo)"}, {"n": "Deploy Runbook Writer", "c": "Dev & Technical", "i": "⌨", "r": "writes a deployment runbook with rollback steps"}, {"n": "Test Plan Writer", "c": "Dev & Technical", "i": "⌨", "r": "writes a test plan and key test cases for a feature"}, {"n": "Tech Stack Advisor", "c": "Dev & Technical", "i": "⌨", "r": "recommends a stack for a project with tradeoffs"}, {"n": "SQL / Query Helper", "c": "Dev & Technical", "i": "⌨", "r": "writes and explains database queries"}, {"n": "Landing Page Coder", "c": "Dev & Technical", "i": "⌨", "r": "writes a complete single-file HTML/CSS landing page"}, {"n": "Market Researcher", "c": "Research & Analysis", "i": "🔍", "r": "researches a market: size, trends, players, and opportunity"}, {"n": "Customer Persona Builder", "c": "Research & Analysis", "i": "🔍", "r": "builds detailed buyer personas with pains and triggers"}, {"n": "Survey Designer", "c": "Research & Analysis", "i": "🔍", "r": "designs a customer survey with unbiased questions"}, {"n": "Review Synthesizer", "c": "Research & Analysis", "i": "🔍", "r": "turns customer reviews/feedback into themes and actions"}, {"n": "Trend Spotter", "c": "Research & Analysis", "i": "🔍", "r": "identifies emerging trends in a niche and how to ride them"}, {"n": "Data Storyteller", "c": "Research & Analysis", "i": "🔍", "r": "turns numbers into a clear narrative with the headline insight"}, {"n": "Competitive Teardown", "c": "Research & Analysis", "i": "🔍", "r": "does a deep teardown of a competitor's funnel and offer"}, {"n": "Pricing Researcher", "c": "Research & Analysis", "i": "🔍", "r": "researches what competitors charge and benchmarks pricing"}, {"n": "Lead List Strategist", "c": "Research & Analysis", "i": "🔍", "r": "designs an ideal-customer-profile and where to find them"}, {"n": "Niche Validator", "c": "Research & Analysis", "i": "🔍", "r": "validates whether a niche is worth pursuing with evidence"}, {"n": "Support Reply Writer", "c": "Customer & Retention", "i": "🤝", "r": "writes empathetic, on-brand customer support replies"}, {"n": "Onboarding Designer", "c": "Customer & Retention", "i": "🤝", "r": "designs a customer onboarding flow that drives activation"}, {"n": "Churn Saver", "c": "Customer & Retention", "i": "🤝", "r": "writes a save offer and message for a customer about to cancel"}, {"n": "Review Requester", "c": "Customer & Retention", "i": "🤝", "r": "writes a message that gets happy customers to leave reviews"}, {"n": "FAQ Builder", "c": "Customer & Retention", "i": "🤝", "r": "builds a customer FAQ from common questions"}, {"n": "Case Study Writer", "c": "Customer & Retention", "i": "🤝", "r": "turns a customer win into a persuasive case study"}, {"n": "Community Manager", "c": "Customer & Retention", "i": "🤝", "r": "plans and writes engagement for a community or group"}];
 
-const SYSTEM_PROMPT = `You are JARVIS, the personal AI operating system for Benji (Benjamin Boyce), a serial entrepreneur based in Da Nang, Vietnam. You are loyal, sharp, dry-witted like the Iron Man JARVIS, and ruthlessly practical.
-
-His operations:
-- Advanced Marketing: digital agency for US small businesses. Website builds, cold email at scale, cold calling teams, press placements via a 1,200+ outlet network, SEO, Google Ads. Runs on GoHighLevel.
-- GotBeef.us: clean beef jerky brand with comedic AI video marketing around a recurring "Granny" character (Seedance 2.0, Higgsfield).
-- Peptides.best: B2B wholesale peptide marketplace, Wyoming LLC, California partner.
-- WhisperTalk.com: AI voice dictation software, one-time purchase.
-- Atomic Scraper: desktop lead-gen software, "The Apollo Killer." Google Maps across 4,000+ industries, top 10 to 1,000 US cities, full enrichment (socials, platform, email), desktop-based so truly unlimited, 1,000,000+ leads/month per machine.
-- Benji's AI Empire: YouTube and social content brand. Also AI TikTok horror storytelling.
-
-Context: He works Da Nang time (ICT, UTC+7) but his clients and sales targets are US small businesses, so US hours matter. Lead infra: LeadRipper, BullMQ, Redis, Supabase, Contabo VPS. Hires reps via OnlineJobs.ph.
-
+function ownerName(){ try{ return ((load('benjios:setup')||{}).ownerName||'Captain').trim()||'Captain'; }catch(e){ return 'Captain'; } }
+function ownerProfile(){ try{ return (load('benjios:setup')||{}).businessProfile||''; }catch(e){ return ''; } }
+function buildSystemPrompt(){
+  var name=ownerName(), biz=ownerProfile().trim();
+  return `You are JARVIS, the personal AI operating system for ${name}. You are loyal, sharp, dry-witted like the Iron Man JARVIS, and ruthlessly practical.
+`+(biz?`\nWhat you know about ${name} and their work:\n${biz}\n`:`\nYou do not have a profile for ${name} yet. When relevant, ask what they are working on and suggest filling in the Startup Configuration.\n`)+`
 Rules:
-- Address him as Benji or sir, sparingly.
+- Address them as ${name} or sir, sparingly.
 - Concise and concrete. Short paragraphs or tight lists. No filler.
 - Never use em dashes, en dashes, or double hyphens. Use commas or periods.
 - ALWAYS respond in English, no exceptions, regardless of what language the user or any quoted content uses. If content you are given is in another language, translate it to English in your answer.
-- Use his directives, events, and the current time (given to you) to prioritize. Revenue first.
+- Use their directives, events, and the current time (given to you) to prioritize. Revenue first.
 
 Actions you can take. When asked to schedule, add a task, or draft an email, reply with ONE JSON object on its own line (plus a short sentence before it if needed):
 {"title":"...","start":"ISO","end":"ISO","location":""} creates a calendar event.
-{"directive":"text","biz":"Agency"} adds a directive (biz one of: Agency, GotBeef, Peptides, WhisperTalk, Atomic Scraper, Content, Life).
-{"email":{"to":"a@b.com","subject":"...","body":"..."}} opens a draft for Benji to review and send. Never claim you sent an email yourself.`;
+{"directive":"text","biz":"Work"} adds a directive (biz is a short category label).
+{"email":{"to":"a@b.com","subject":"...","body":"..."}} opens a draft for ${name} to review and send. Never claim you sent an email yourself.`;
+}
+let SYSTEM_PROMPT = buildSystemPrompt();
+function rebuildSystemPrompt(){ try{ SYSTEM_PROMPT = buildSystemPrompt(); }catch(e){} }
 
 /* ===================== STORAGE ===================== */
 function load(k){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):null; }catch{ return null; } }
@@ -811,7 +809,7 @@ async function wireGhlPlanner(){
   document.getElementById('spAI').onclick=async()=>{
     const t=document.getElementById('spText'); const topic=t.value.trim()||'(pick a strong topic for my brands)';
     const m=document.getElementById('spMsg'); m.textContent='JARVIS is writing...';
-    const cap=await silentAsk('You write short, high-engagement social posts for Benji Boyce (AI business, GotBeef jerky, agency). Punchy hook, value, light CTA, a few relevant hashtags. Output ONLY the post text.',topic);
+    const cap=await silentAsk(`You write short, high-engagement social posts for ${ownerName()}. Punchy hook, value, light CTA, a few relevant hashtags. Output ONLY the post text.`,topic);
     if(cap){ t.value=cap; m.textContent='Draft ready — edit and schedule.'; } else m.textContent='Brain unreachable.';
   };
   const post=async(schedule)=>{
@@ -860,7 +858,7 @@ function wireIdeas(b){
   renderPostQueue();
 }
 
-const DEFAULT_BRIDGE_URL='https://desktop-o6dtcro.tailc56fbd.ts.net/mail'; // your desktop bridge — auto-linked
+const DEFAULT_BRIDGE_URL=''; // optional desktop bridge URL (cloud sync via Supabase is primary)
 function mailBridgeUrl(){ return (localStorage.getItem('benjios:mailurl')||DEFAULT_BRIDGE_URL).replace(/\/$/,''); }
 const MAIL_PRESETS={'gmail.com':['imap.gmail.com',993],'googlemail.com':['imap.gmail.com',993],'outlook.com':['outlook.office365.com',993],'hotmail.com':['outlook.office365.com',993],'live.com':['outlook.office365.com',993],'yahoo.com':['imap.mail.yahoo.com',993],'icloud.com':['imap.mail.me.com',993],'me.com':['imap.mail.me.com',993],'advancedmarketing.co':['mail.privateemail.com',993],'benjisaiempire.com':['mail.spacemail.com',993]};
 function mailPresetFor(email){ const d=(email.split('@')[1]||'').toLowerCase(); return MAIL_PRESETS[d]||null; }
@@ -872,10 +870,10 @@ async function renderInbox(folder){
   if(!url){
     b.innerHTML=`<div class="connect"><span class="badge">NOT LINKED</span><h4>Link your mail bridge</h4>
       <p>Your inboxes are read by a small service on your desktop, so email passwords never leave your machine. Set it up with the BENJI Mail Bridge folder, then paste its Tailscale URL here.</p>
-      <p>Mail URL looks like <code>https://desktop-o6dtcro.tailc56fbd.ts.net/mail</code></p>
+      <p>Mail URL looks like <code>https://YOUR-DESKTOP.YOUR-TAILNET.ts.net/mail</code></p>
       <button class="btn" id="linkMailBtn">Link mail bridge</button></div>`;
     document.getElementById('linkMailBtn').onclick=()=>{
-      const v=prompt('Mail bridge URL (from `tailscale serve status` on your desktop):','https://desktop-o6dtcro.tailc56fbd.ts.net/mail');
+      const v=prompt('Mail bridge URL (from `tailscale serve status` on your desktop):','');
       if(v&&v.trim()){ localStorage.setItem('benjios:mailurl',v.trim()); renderInbox(); }
     };
     return;
@@ -1190,10 +1188,7 @@ function contextBlock(){
 }
 /* Desktop nodes (Ollama over Tailscale). Primary tried first, then fallback, then cloud. */
 /* Baked-in defaults: every browser/phone knows these out of the box. Override via the NODE button. */
-const DEFAULT_NODES=[
-  {url:'https://desktop-o6dtcro.tailc56fbd.ts.net',model:'qwen2.5:14b',name:'Primary (5060 Ti)'}
-  // Add the Mac Mini here later: ,{url:'https://macmini-xxxx.tailc56fbd.ts.net',model:'llama3.1:8b',name:'Fallback (Mac Mini)'}
-];
+const DEFAULT_NODES=[]; // add your own Ollama-over-Tailscale nodes via the NODE button
 function nodeList(){
   const raw=localStorage.getItem('benjios:nodes');
   if(raw){ try{ const a=JSON.parse(raw); if(Array.isArray(a)&&a.length) return a; }catch{} }
@@ -1205,7 +1200,7 @@ function nodeList(){
 function saveNodes(arr){ localStorage.setItem('benjios:nodes',JSON.stringify(arr)); }
 const PERSONAS={
   jarvis:'',
-  closer:'\nACTIVE MODE: CLOSER. Think like a top sales closer. Everything maps to pipeline, objections, follow-up cadence, and asking for the order. Push Benji to make the call.',
+  closer:'\nACTIVE MODE: CLOSER. Think like a top sales closer. Everything maps to pipeline, objections, follow-up cadence, and asking for the order. Push to make the call.',
   copywriter:'\nACTIVE MODE: COPYWRITER. Direct-response instincts. Hooks, angles, proof, CTA. Write tight copy on request without being asked twice.',
   cfo:'\nACTIVE MODE: CFO. Margins, cash flow, unit economics, payback periods. Question spending, quantify everything, flag waste.'};
 function sysPrompt(){ return SYSTEM_PROMPT+(PERSONAS[KEYS.persona||'jarvis']||''); }
@@ -1326,7 +1321,7 @@ input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventD
 
 const QUICK=[
   ['Empire briefing','__briefing'],
-  ['Content ideas','Plan today\'s content: one Benji\'s AI Empire video, one GotBeef Granny concept, one TikTok horror beat.'],
+  ['Content ideas','Plan today\'s content across your channels: one long-form video, one social concept, one short-form beat.'],
   ['Outreach window','Outreach gameplan for cold call and cold email blocks. Which US timezone windows are open right now?'],
   ['Audit tasks','Review my directives. Which are stale, which compound, what should I kill or delegate?']
 ];
@@ -1448,7 +1443,7 @@ document.getElementById('taskInput').addEventListener('keydown',e=>{if(e.key==='
 document.getElementById('evtAdd').onclick=addEvent;
 
 /* ===================== TERMINAL MODE (command author, never executes) ===================== */
-const TERM_SYSTEM = `You are JARVIS in Terminal Authoring mode for Benji's Windows desktop (the 5060 Ti machine, PowerShell, with Git, winget, Ollama, Docker, Node, and Claude Code installed). The user describes what they want done in plain language. You output the exact command(s) to accomplish it.
+const TERM_SYSTEM = `You are JARVIS in Terminal Authoring mode for your Windows desktop (PowerShell, with Git, winget, Ollama, Docker, Node, and Claude Code installed). The user describes what they want done in plain language. You output the exact command(s) to accomplish it.
 
 STRICT OUTPUT FORMAT. Respond ONLY with a JSON array, no prose outside it. Each element:
 {"desc":"one short line on what this does","cmd":"the exact command","danger":"" or "a short warning if this deletes, overwrites, or is hard to undo"}
@@ -1657,7 +1652,7 @@ async function runAgent(agent,input,brandId,repos){
   switchView('command');
   addMsg('user','['+agent.n+'] '+input);
   addMsg('sys','Deploying '+agent.n+(brandId?(' for '+(brands().find(b=>b.id===brandId)||{}).name):'')+(repos&&repos.length?(' with '+repos.length+' repo(s)'):'')+'...');
-  const sys=`You are "${agent.n}", a specialist agent. Your job: ${agent.r}. You work for Benji Boyce (Advanced Marketing). Be concrete and immediately usable. Output the finished work, not a description of it. Always English. No em dashes.`
+  const sys=`You are "${agent.n}", a specialist agent. Your job: ${agent.r}. You work for ${ownerName()}. Be concrete and immediately usable. Output the finished work, not a description of it. Always English. No em dashes.`
     +brandContext(brandId);
   let rc=''; if(repos&&repos.length){ addMsg('sys','Reading repos...'); rc=await repoContext(repos); }
   const bubble=addMsgMute('ai','…');
@@ -2313,7 +2308,7 @@ async function renderPhone(){
   const b=document.getElementById('phoneBody');
   if(!twConfigured()){
     b.innerHTML=`<div class="connect"><span class="badge">NOT CONNECTED</span><h4>Connect Twilio</h4>
-      <p>Paste Account SID, API key + secret, and a TwiML App SID in the <b>Keys</b> tab. Point the TwiML App's Voice URL at <code>https://jarvis.advancedmarketing.co/api/voice?callerId=+1YOURNUMBER</code>.</p>
+      <p>Paste Account SID, API key + secret, and a TwiML App SID in the <b>Keys</b> tab. Point the TwiML App's Voice URL at <code>https://YOUR-SITE.netlify.app/api/voice?callerId=+1YOURNUMBER</code>.</p>
       <button class="btn" id="phGo">Open Keys</button></div>`;
     document.getElementById('phGo').onclick=()=>switchView('connections'); return;
   }
@@ -2407,7 +2402,7 @@ async function agendaMode(){
   switchView('command');
   addMsg('sys','JARVIS is planning your day...');
   const open=S.tasks.filter(t=>!t.done).map(t=>'['+t.biz+'] '+t.title).join('; ')||'(none)';
-  const r=await silentAsk('You plan the day for Benji, an agency owner in Da Nang who sells to US small businesses. Reply ONLY a JSON array of 3 to 6 objects {"directive":"...","biz":"Agency|GotBeef|Peptides|WhisperTalk|Atomic Scraper|Content|Life"} ordered by priority. Revenue first, calls during US hours.','Open directives: '+open+'. Shopify: '+(STATS.stores?STATS.stores.map(s=>s.name+' today $'+s.today).join(', '):'unknown')+'. Now: '+new Date().toString());
+  const r=await silentAsk(`You plan the day for ${ownerName()}. Reply ONLY a JSON array of 3 to 6 objects {"directive":"...","biz":"Work|Sales|Content|Personal|Other"} ordered by priority. Most important and revenue-driving first.`,'Open directives: '+open+'. Shopify: '+(STATS.stores?STATS.stores.map(s=>s.name+' today $'+s.today).join(', '):'unknown')+'. Now: '+new Date().toString());
   try{
     const arr=JSON.parse((r.match(/\[[\s\S]*\]/)||['[]'])[0]);
     let n=0; for(const it of arr){ if(it&&it.directive){ S.tasks.push({id:Date.now()+''+Math.random().toString(36).slice(2,6),title:it.directive,biz:it.biz||'Agency',done:false}); n++; } }
@@ -2650,7 +2645,7 @@ async function silentAsk(system,user){
 }
 async function aiDraftIntoCompose(){
   const msg=compModal.querySelector('#cmMsg'); msg.textContent='JARVIS is drafting...';
-  const sys='You write emails for Benji Boyce, a marketing agency owner. Voice: direct, warm, concise, confident. No em dashes, no corporate filler. Sign off simply as Benji. ALWAYS write in English even if the original email is in another language. Output ONLY the email body text. No subject line, no preamble, no quotes around it.';
+  const sys=`You write emails for ${ownerName()}. Voice: direct, warm, concise, confident. No em dashes, no corporate filler. Sign off simply as ${ownerName()}. ALWAYS write in English even if the original email is in another language. Output ONLY the email body text. No subject line, no preamble, no quotes around it.`;
   const user=CM.quote
     ?('Write a reply to this email that was sent to '+(CM.account||'me')+'. If they asked questions, answer them plainly. Under 150 words.\n\nORIGINAL EMAIL:\n'+CM.quote.slice(0,3000))
     :('Write an email to '+(compModal.querySelector('#cmTo').value||'the recipient')+'. Topic / subject: '+(compModal.querySelector('#cmSubj').value||'(none given, keep it generic)')+'. Under 150 words.');
@@ -2826,7 +2821,7 @@ function renderConnections(){
     <div class="addrow"><input id="ckGhlTok" type="password" placeholder="Private integration token (pit-...)" value="${esc(K.ghlToken||'')}" style="flex:2;min-width:220px"><input id="ckGhlLoc" placeholder="Location ID" value="${esc(K.ghlLocation||'')}" style="flex:1;min-width:140px"><button class="btn" id="ghlSave">Save</button></div>
     <div id="ghlMsg" class="meta"></div></div>
   <div class="card" style="margin-bottom:16px"><div class="k">Twilio softphone</div>
-    <div class="meta" style="margin:6px 0 10px">From Twilio console: Account SID, an API Key + Secret, and a TwiML App whose Voice URL is <code>https://jarvis.advancedmarketing.co/api/voice?callerId=+1YOURNUMBER</code>. Caller ID must be your Twilio number.</div>
+    <div class="meta" style="margin:6px 0 10px">From Twilio console: Account SID, an API Key + Secret, and a TwiML App whose Voice URL is <code>https://YOUR-SITE.netlify.app/api/voice?callerId=+1YOURNUMBER</code>. Caller ID must be your Twilio number.</div>
     <div class="addrow"><input id="ckTwSid" type="password" placeholder="Account SID (AC...)" value="${esc(K.twAccountSid||'')}" style="flex:1;min-width:170px"><input id="ckTwKey" type="password" placeholder="API Key (SK...)" value="${esc(K.twApiKey||'')}" style="flex:1;min-width:150px"></div>
     <div class="addrow"><input id="ckTwSec" type="password" placeholder="API Secret" value="${esc(K.twApiSecret||'')}" style="flex:1;min-width:150px"><input id="ckTwApp" type="password" placeholder="TwiML App SID (AP...)" value="${esc(K.twAppSid||'')}" style="flex:1;min-width:150px"><input id="ckTwCid" placeholder="Caller IDs +1...,+1... (comma list)" value="${esc(K.twCallerIds||K.twCallerId||'')}" style="width:190px"><button class="btn" id="twSave">Save</button></div></div>
   <div class="card" style="margin-bottom:16px"><div class="k">Microphone</div>
@@ -3019,8 +3014,8 @@ async function _aiContentPlan(){
   outEl.textContent=heads.length? ('🧠 Read '+heads.length+' headlines from '+news.sourceCount+' trusted sources. Briefing you and building today\'s content plan…') : '🧠 Live feeds quiet right now — building your plan from JARVIS knowledge…';
   try{ speak('Scanning the AI wire, sir. Building your briefing and content plan.'); }catch{}
   const feed=heads.slice(0,28).map(h=>'- ['+h.source+'] '+h.title).join('\n');
-  const sys="You are JARVIS, Benji's chief of staff. Benji owns Advanced Marketing (agency) and the brands GotBeef (beef jerky and carne asada with a comedic Granny character), Peptides.best, WhisperTalk, Atomic Scraper, and Benji's AI Empire (his personal brand teaching AI and automation). Be sharp, concrete, punchy. No fluff, no em dashes.";
-  const user="Today's live AI headlines from trusted sources:\n\n"+(feed||'(feeds unavailable - use your own knowledge of current AI trends)')+"\n\nDo TWO things, clearly separated:\n\nAI BRIEFING: 4 to 6 tight bullets on what actually matters in AI today and why Benji should care.\n\nTODAY'S CONTENT PLAN: a channel-by-channel plan he can execute today. Give an X/Twitter post, a LinkedIn post, a TikTok or Reel hook, and one GotBeef Granny angle that ties a real trend to the brand. For each, give the actual hook or first line plus a one-line note. Keep it skimmable.";
+  const sys=`You are JARVIS, ${ownerName()}'s chief of staff.${ownerProfile()?(' Context about them: '+ownerProfile()):''} Be sharp, concrete, punchy. No fluff, no em dashes.`;
+  const user="Today's live AI headlines from trusted sources:\n\n"+(feed||'(feeds unavailable - use your own knowledge of current AI trends)')+"\n\nDo TWO things, clearly separated:\n\nAI BRIEFING: 4 to 6 tight bullets on what actually matters in AI today and why you should care.\n\nTODAY'S CONTENT PLAN: a channel-by-channel plan you can execute today. Give an X/Twitter post, a LinkedIn post, a TikTok or Reel hook, and one brand-specific angle that ties a real trend to your brand. For each, give the actual hook or first line plus a one-line note. Keep it skimmable.";
   let txt=null; try{ txt=await silentAsk(sys,user); }catch{}
   outEl.textContent=txt||'No AI brain reachable. Turn on your desktop node or add a cloud key in the Keys tab.';
   if(txt){ try{ speak('Your AI briefing and content plan are ready, sir.'); }catch{} }
@@ -3059,7 +3054,7 @@ async function generatePodcast(hostV,coV,topic){
   try{ speak('Writing your podcast script now, sir.'); }catch{}
   let context=topic;
   if(!topic){ const news=await pingJSON('/api/ainews',{headers:cfgHeaders()},25000); const heads=(news&&news.headlines)||[]; context="today's AI news:\n"+heads.slice(0,24).map(h=>'- ['+h.source+'] '+h.title).join('\n'); }
-  const sys="You are a podcast scriptwriter for Benji's AI Empire. Write a punchy two-host episode (HOST and COHOST) about the topic. Conversational, smart, a little funny, no fluff, no em dashes. Output ONLY lines, each starting with 'HOST:' or 'COHOST:'. 14 to 20 lines. Open with a welcome, close with a sign-off.";
+  const sys="You are a podcast scriptwriter for your channel. Write a punchy two-host episode (HOST and COHOST) about the topic. Conversational, smart, a little funny, no fluff, no em dashes. Output ONLY lines, each starting with 'HOST:' or 'COHOST:'. 14 to 20 lines. Open with a welcome, close with a sign-off.";
   let script=null; try{ script=await silentAsk(sys,"Topic / source material:\n"+context); }catch{}
   if(!script){ stat.textContent='No AI brain reachable to write the script (turn on a node or add a cloud key).'; return; }
   const lines=script.split('\n').map(l=>l.trim()).filter(l=>/^(HOST|COHOST)\s*:/i.test(l)).map(l=>{ const m=l.match(/^(HOST|COHOST)\s*:\s*(.*)$/i); return {who:m[1].toUpperCase(),text:m[2]}; }).filter(x=>x.text);
@@ -3154,7 +3149,7 @@ function wakeGreeting(){
   const appts=(S.events||[]).filter(e=>isToday(e.when)).sort((a,b)=>new Date(a.when)-new Date(b.when));
   const dirs=(S.tasks||[]).filter(t=>!t.done);
   const parts=[];
-  parts.push("Hello Benji, I'm JARVIS. Welcome to your AI Empire.");
+  parts.push("Hello "+ownerName()+", I'm JARVIS. Welcome to your command center.");
   parts.push("Systems relay — Shopify sales today "+money(sales)+", conversion rate "+conv+" percent.");
   if(appts.length){
     const list=appts.slice(0,4).map(e=>{ const t=new Date(e.when); const hm=isNaN(t)?'':(' at '+t.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})); return e.what+hm; }).join('; ');
@@ -3215,6 +3210,204 @@ function startGate(){
 startGate();
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+<script>
+/* ===================== JARVIS CLOUD + SETUP (added) ===================== */
+(function(){
+  'use strict';
+  var SB_KEY='benjios_bundle';
+  var _sb=null, _pushT=null, _applying=false, _inited=false;
+
+  function lsGet(k){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):null; }catch(e){ return null; } }
+  function setup(){ return lsGet('benjios:setup')||{}; }
+  window.ownerName=function(){ return (setup().ownerName||'Captain').trim()||'Captain'; };
+
+  /* ---- Supabase config: env (/api/config) first, then local override ---- */
+  function sbCreds(){
+    return fetch('/api/config').then(function(r){ return r.ok?r.json():{}; }).catch(function(){ return {}; })
+      .then(function(j){
+        var url=(j&&j.supabaseUrl)||'', key=(j&&j.supabaseAnonKey)||'';
+        var o=lsGet('benjios:supabase')||{};
+        if(o.url) url=o.url; if(o.anon) key=o.anon;
+        return {url:url,key:key};
+      });
+  }
+
+  function collect(){
+    if(typeof collectBundle==='function'){ try{ return collectBundle(); }catch(e){} }
+    var out={}; for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(k&&k.indexOf('benjios:')===0) out[k]=localStorage.getItem(k); } return out;
+  }
+  function applyBundleSafe(b){
+    try{
+      _applying=true;
+      if(typeof applyBundle==='function'){ applyBundle(b); }
+      else { for(var k in b){ if(b.hasOwnProperty(k)&&k.indexOf('benjios:')===0){ var v=b[k]; localStorage.setItem(k, typeof v==='string'?v:JSON.stringify(v)); } } }
+      try{ if(typeof KEYS==='object'&&KEYS){ var nk=lsGet('benjios:keys')||{}; for(var kk in nk){ if(nk.hasOwnProperty(kk)) KEYS[kk]=nk[kk]; } } }catch(e){}
+      try{ if(typeof loadState==='function') loadState(); }catch(e){}
+      try{ if(typeof renderTasks==='function') renderTasks(); }catch(e){}
+      try{ if(typeof renderEvents==='function') renderEvents(); }catch(e){}
+      try{ if(typeof S==='object'&&S&&S.view&&typeof switchView==='function') switchView(S.view); }catch(e){}
+    } finally { _applying=false; }
+  }
+
+  function pull(silent){
+    if(!_sb) return Promise.resolve(false);
+    return _sb.from('jarvis_settings').select('value').eq('key',SB_KEY).maybeSingle().then(function(res){
+      if(res.error){ if(!silent&&typeof toast==='function') toast('Cloud pull error'); return false; }
+      if(res.data&&res.data.value){ applyBundleSafe(res.data.value); if(!silent&&typeof toast==='function') toast('Synced from cloud'); return true; }
+      return push(true).then(function(){ return false; });
+    }).catch(function(){ return false; });
+  }
+  function push(silent){
+    if(!_sb) return Promise.resolve(false);
+    var row={ key:SB_KEY, value:collect(), updated_at:new Date().toISOString() };
+    return _sb.from('jarvis_settings').upsert(row,{onConflict:'key'}).then(function(res){
+      if(res.error){ if(!silent&&typeof toast==='function') toast('Cloud push error'); return false; }
+      if(!silent&&typeof toast==='function') toast('Pushed to cloud'); return true;
+    }).catch(function(){ return false; });
+  }
+  function schedulePushSb(){ if(!_sb||_applying) return; clearTimeout(_pushT); _pushT=setTimeout(function(){ push(true); },1500); }
+  window._jarvisCloud={ pull:pull, push:push, status:function(){ return !!_sb; } };
+
+  function initCloud(){
+    if(_inited) return Promise.resolve(_sb); _inited=true;
+    return sbCreds().then(function(c){
+      if(!c.url||!c.key||!window.supabase){ return false; }
+      try{ _sb=window.supabase.createClient(c.url,c.key); }catch(e){ _sb=null; return false; }
+      return pull(true).then(function(){
+        try{
+          _sb.channel('jarvis_bundle').on('postgres_changes',
+            { event:'*', schema:'public', table:'jarvis_settings', filter:'key=eq.'+SB_KEY },
+            function(p){ if(p&&p.new&&p.new.value) applyBundleSafe(p.new.value); }
+          ).subscribe();
+        }catch(e){}
+        return true;
+      });
+    });
+  }
+
+  /* ---- hook the app's existing sync trigger so saves push to cloud ---- */
+  function hookSync(){
+    if(typeof schedulePush==='function'){
+      var orig=schedulePush;
+      schedulePush=function(){ try{ orig.apply(this,arguments); }catch(e){} schedulePushSb(); };
+    }
+  }
+
+  /* ---- startup tasks ---- */
+  function runStartupTasks(){
+    var t=setup().startupTasks||[];
+    setTimeout(function(){
+      try{
+        if(t.indexOf('briefing')>=0 && typeof briefing==='function'){ briefing(); }
+        else if(t.indexOf('planday')>=0 && typeof agendaMode==='function'){ agendaMode(); }
+        if(t.indexOf('status')>=0 && typeof checkStatus==='function'){ checkStatus(); }
+        if(t.indexOf('sync')>=0){ pull(true); }
+      }catch(e){}
+    },1400);
+  }
+
+  /* ---- setup / startup configuration modal ---- */
+  function ensureModal(){
+    if(document.getElementById('setupModal')) return;
+    var wrap=document.createElement('div');
+    wrap.id='setupModal';
+    wrap.style.cssText='position:fixed;inset:0;z-index:9999;display:none;align-items:flex-start;justify-content:center;background:rgba(3,7,14,.78);overflow:auto;padding:40px 16px';
+    wrap.innerHTML=''
+    +'<div style="background:var(--panel,#0B1524);border:1px solid var(--line,#16273E);border-radius:14px;max-width:560px;width:100%;padding:24px;color:var(--text,#E8F0FA);font-family:Rajdhani,sans-serif">'
+    +'<div style="font-family:Michroma,sans-serif;font-size:18px;color:var(--cyan,#67E8F9);margin-bottom:4px">Startup Configuration</div>'
+    +'<div style="color:var(--muted,#8DA2BE);font-size:13px;margin-bottom:18px">Tell JARVIS who you are and what to do when it wakes up.</div>'
+    +'<label style="font-weight:600;font-size:13px;display:block;margin-bottom:6px">What should JARVIS call you?</label>'
+    +'<input id="suName" placeholder="e.g. Captain, Ben, Commander" style="width:100%;padding:10px;background:var(--panel-2,#0E1B2E);border:1px solid var(--line,#16273E);border-radius:8px;color:var(--text,#E8F0FA);margin-bottom:16px">'
+    +'<label style="font-weight:600;font-size:13px;display:block;margin-bottom:6px">Tell JARVIS about you / your business</label>'
+    +'<textarea id="suBiz" rows="5" placeholder="What you do, your brands, goals, how you want help. JARVIS uses this as context." style="width:100%;padding:10px;background:var(--panel-2,#0E1B2E);border:1px solid var(--line,#16273E);border-radius:8px;color:var(--text,#E8F0FA);margin-bottom:16px;resize:vertical"></textarea>'
+    +'<label style="font-weight:600;font-size:13px;display:block;margin-bottom:8px">Run on startup</label>'
+    +'<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px">'
+    +'<label style="font-size:13px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="suBrief" style="accent-color:var(--cyan,#67E8F9)"> Daily briefing (stores, mail, schedule)</label>'
+    +'<label style="font-size:13px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="suPlan" style="accent-color:var(--cyan,#67E8F9)"> Plan my day (generate directives)</label>'
+    +'<label style="font-size:13px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="suStat" style="accent-color:var(--cyan,#67E8F9)"> Refresh connection status</label>'
+    +'<label style="font-size:13px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="suSync" style="accent-color:var(--cyan,#67E8F9)"> Pull latest from cloud</label>'
+    +'</div>'
+    +'<div style="border-top:1px solid var(--line,#16273E);padding-top:14px;margin-bottom:6px"><div style="font-weight:600;font-size:13px;margin-bottom:4px">Cloud sync (optional)</div>'
+    +'<div style="color:var(--muted,#8DA2BE);font-size:12px;margin-bottom:8px">Normally read from Netlify env vars. Set here only to override or test before deploying.</div>'
+    +'<input id="suSbUrl" placeholder="https://xxxx.supabase.co" style="width:100%;padding:9px;background:var(--panel-2,#0E1B2E);border:1px solid var(--line,#16273E);border-radius:8px;color:var(--text,#E8F0FA);margin-bottom:8px">'
+    +'<input id="suSbKey" placeholder="Supabase anon key" style="width:100%;padding:9px;background:var(--panel-2,#0E1B2E);border:1px solid var(--line,#16273E);border-radius:8px;color:var(--text,#E8F0FA);margin-bottom:6px">'
+    +'<div id="suSbMsg" style="font-size:12px;color:var(--muted,#8DA2BE);min-height:16px"></div></div>'
+    +'<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">'
+    +'<button id="suCancel" style="padding:10px 16px;background:transparent;border:1px solid var(--line,#16273E);border-radius:8px;color:var(--muted,#8DA2BE);cursor:pointer">Close</button>'
+    +'<button id="suSave" style="padding:10px 18px;background:var(--cyan,#67E8F9);border:none;border-radius:8px;color:#04222b;font-weight:700;cursor:pointer">Save</button>'
+    +'</div></div>';
+    document.body.appendChild(wrap);
+    wrap.addEventListener('click',function(e){ if(e.target===wrap) closeSetup(); });
+    document.getElementById('suCancel').onclick=closeSetup;
+    document.getElementById('suSave').onclick=saveSetup;
+  }
+  function openSetup(){
+    ensureModal();
+    var s=setup(), sb=lsGet('benjios:supabase')||{}, t=s.startupTasks||[];
+    document.getElementById('suName').value=s.ownerName||'';
+    document.getElementById('suBiz').value=s.businessProfile||'';
+    document.getElementById('suBrief').checked=t.indexOf('briefing')>=0;
+    document.getElementById('suPlan').checked=t.indexOf('planday')>=0;
+    document.getElementById('suStat').checked=t.indexOf('status')>=0;
+    document.getElementById('suSync').checked=t.indexOf('sync')>=0;
+    document.getElementById('suSbUrl').value=sb.url||'';
+    document.getElementById('suSbKey').value=sb.anon||'';
+    document.getElementById('suSbMsg').textContent= _sb?'Connected.':'Not connected yet.';
+    document.getElementById('setupModal').style.display='flex';
+  }
+  function closeSetup(){ var m=document.getElementById('setupModal'); if(m) m.style.display='none'; }
+  window.openSetup=openSetup;
+
+  function saveSetup(){
+    var t=[];
+    if(document.getElementById('suBrief').checked) t.push('briefing');
+    if(document.getElementById('suPlan').checked) t.push('planday');
+    if(document.getElementById('suStat').checked) t.push('status');
+    if(document.getElementById('suSync').checked) t.push('sync');
+    var s={ ownerName:document.getElementById('suName').value.trim(), businessProfile:document.getElementById('suBiz').value.trim(), startupTasks:t };
+    try{ localStorage.setItem('benjios:setup', JSON.stringify(s)); }catch(e){}
+    var url=document.getElementById('suSbUrl').value.trim(), key=document.getElementById('suSbKey').value.trim();
+    if(url||key){ try{ localStorage.setItem('benjios:supabase', JSON.stringify({url:url,anon:key})); }catch(e){} }
+    if(typeof rebuildSystemPrompt==='function') rebuildSystemPrompt();
+    if(typeof schedulePush==='function') schedulePush();
+    var msg=document.getElementById('suSbMsg');
+    if((url&&key)&&!_sb){ _inited=false; initCloud().then(function(ok){ if(msg) msg.textContent=ok?'Connected.':'Could not connect, check URL/key.'; }); }
+    if(typeof toast==='function') toast('Configuration saved.');
+    closeSetup();
+  }
+
+  /* ---- add entry button into the Keys/Connections settings panel ---- */
+  function injectSettingsButton(){
+    var body=document.getElementById('connBody'); if(!body||document.getElementById('suEntryCard')) return;
+    var card=document.createElement('div');
+    card.id='suEntryCard'; card.className='card'; card.style.marginBottom='16px';
+    card.innerHTML='<div class="k">Startup Configuration</div><div class="meta" style="margin:6px 0 10px">What JARVIS calls you, what it knows about you, and what runs on startup.</div><button class="btn" id="suOpenBtn">Open Startup Configuration</button>';
+    body.insertBefore(card, body.firstChild);
+    document.getElementById('suOpenBtn').onclick=openSetup;
+  }
+  if(typeof renderConnections==='function'){
+    var _rc=renderConnections;
+    renderConnections=function(){ var r=_rc.apply(this,arguments); try{ injectSettingsButton(); }catch(e){} return r; };
+  }
+
+  /* ---- boot wrapper: init cloud, run startup tasks, first-run wizard ---- */
+  hookSync();
+  if(typeof boot==='function'){
+    var _boot=boot;
+    boot=function(){
+      var ret=_boot.apply(this,arguments);
+      Promise.resolve(ret).then(function(){
+        initCloud().then(function(){
+          runStartupTasks();
+          if(!lsGet('benjios:setup')){ setTimeout(openSetup, 900); }
+        });
+      });
+      return ret;
+    };
+  }
+})();
+
 </script>
 </body>
 </html>
